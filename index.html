@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0e14">
+<title>BoneSim 骨透かしシミュレーター</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="./src/app/style.css">
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }
+</script>
+</head>
+<body>
+<header id="topbar">
+  <div class="brand">BoneSim <span>骨透かしシミュレーター</span></div>
+  <nav class="tabs" role="tablist">
+    <button id="tabSim" class="tab active" role="tab" aria-selected="true">シミュレーター</button>
+    <button id="tabCam" class="tab" role="tab" aria-selected="false">カメラ</button>
+  </nav>
+</header>
+
+<main id="app">
+  <section id="viewport">
+    <video id="video" playsinline muted></video>
+    <canvas id="demo2d" width="640" height="480"></canvas>
+    <canvas id="gl"></canvas>
+    <div id="loading">骨格モデルを読み込み中…</div>
+    <div id="pickInfo" hidden></div>
+    <div id="teach" hidden></div>
+    <div id="camHud" hidden>
+      <span id="camFps">-- fps</span><span id="camStatus"></span>
+    </div>
+    <div id="countdown" hidden></div>
+  </section>
+
+  <aside id="panel">
+    <button id="panelToggle" aria-label="パネルの開閉">▾ 操作パネル</button>
+    <div id="panelBody">
+      <!-- simulator -->
+      <div id="simPanel">
+        <details open>
+          <summary>プリセット動作</summary>
+          <div id="presetButtons" class="btn-grid"></div>
+          <div class="row">
+            <button id="playPause" class="primary">⏸ 一時停止</button>
+            <label class="inline">速さ <input id="speed" type="range" min="0.25" max="2" step="0.05" value="1"><output id="speedOut">1.0×</output></label>
+          </div>
+          <label class="switch big"><input id="coupling" type="checkbox" checked><span>連動運動 ON</span></label>
+          <p class="hint">OFFにすると、骨を1つずつ単純に回すモデルと比べられます。</p>
+        </details>
+        <details open>
+          <summary>関節を動かす</summary>
+          <div class="row">
+            <button id="resetAnat">解剖学的正位</button>
+            <button id="resetNeutral">中間位</button>
+          </div>
+          <div id="sliders"></div>
+        </details>
+      </div>
+
+      <!-- camera -->
+      <div id="camPanel" hidden>
+        <details open>
+          <summary>カメラ</summary>
+          <label class="inline">入力
+            <select id="camSource"><option value="camera">Webカメラ</option><option value="file">動画ファイル（スマホで撮影した動画など）</option><option value="demo">デモ（合成データ・カメラ不要）</option></select>
+            <input type="file" id="camFile" accept="video/*" hidden>
+          </label>
+          <div class="row">
+            <button id="camStart" class="primary">▶ 開始</button>
+            <button id="camStop">■ 停止</button>
+          </div>
+          <div class="row">
+            <button id="camCalib">キャリブレーション</button>
+            <button id="camFlip">前面 / 背面 切替</button>
+          </div>
+          <label class="switch"><input id="camMirror" type="checkbox" checked><span>鏡像表示（ミラー）</span></label>
+          <label class="switch"><input id="camSide3D" type="checkbox"><span>3Dビューを並べて表示</span></label>
+          <label class="switch"><input id="camDim" type="checkbox" checked><span>映像を暗くする</span></label>
+          <label class="switch"><input id="camHands" type="checkbox" checked><span>手の追跡（指・回内外）※重い場合はOFF</span></label>
+          <label class="switch"><input id="camFade" type="checkbox" checked><span>推定の信頼度が低い骨を薄く表示</span></label>
+          <label class="inline">モデル
+            <select id="camModel"><option value="lite">軽量（スマホ向け）</option><option value="full">標準</option></select>
+          </label>
+          <p id="camCalibInfo" class="hint">キャリブレーション未実施（標準体格を使用）</p>
+          <p class="hint">キャリブレーション：カメラに正対し、腕を体から少し離して2〜3秒静止してください。骨の長さをあなたの体格に合わせます。</p>
+          <p class="hint">カメラはHTTPSまたはlocalhostでのみ使えます。映像・骨格データは端末内で処理され、外部に送信されません（MediaPipe ライブラリ内蔵の利用統計送信も本アプリで止めています）。</p>
+          <details>
+            <summary>推定の限界（必読）</summary>
+            <ul class="hint">
+              <li>前腕の回内・回外と手関節は、手がはっきり映っているとき（手の追跡ON）のみ比較的正確です。</li>
+              <li>肘を伸ばしていると、肩の回旋と前腕の回内外は映像から区別できません（どちらとも解釈できる）。</li>
+              <li>体幹の屈曲・肩甲骨・鎖骨・膝蓋骨・スクリューホームは直接は見えず、モデルによる推定です。</li>
+              <li>真横（側面）から撮った場合や、カメラに向けて伸ばした腕・脚は奥行きの誤差が大きく、精度が落ちます。</li>
+              <li>骨は標準的な骨格モデル（BodyParts3D）を体格に合わせて伸縮したもので、あなた自身の骨ではありません。実際の人物での精度は未検証です。</li>
+            </ul>
+          </details>
+        </details>
+      </div>
+
+      <!-- display (both) -->
+      <details open>
+        <summary>表示</summary>
+        <div class="seg" id="styleSeg">
+          <button data-style="xray" class="active">X線風</button>
+          <button data-style="bone">骨</button>
+          <button data-style="skin">半透明皮膚つき</button>
+        </div>
+        <label class="switch"><input id="invert" type="checkbox"><span>白黒反転（フィルム風）</span></label>
+        <label class="switch"><input id="showAxes" type="checkbox"><span>関節軸を表示</span></label>
+        <label class="switch"><input id="showLandmarks" type="checkbox"><span>骨指標（ランドマーク）を表示</span></label>
+        <label class="switch"><input id="autoER" type="checkbox"><span>肩の高挙上で上腕骨を自動外旋</span></label>
+        <div id="viewButtons" class="btn-grid small"></div>
+        <p class="hint">骨をタップ／クリックすると名前と、その骨を動かす関節を表示します。</p>
+      </details>
+    </div>
+  </aside>
+</main>
+
+<footer id="footer">
+  <span class="disclaimer">教育用の推定モデルです。実際の骨や画像ではなく、診断・撮影の判断には使用できません。</span>
+  <span class="credit">骨モデル: BodyParts3D © DBCLS, CC BY-SA 2.1 JP（改変あり）</span>
+</footer>
+
+<script type="module" src="./src/app/main.js"></script>
+</body>
+</html>

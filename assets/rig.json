@@ -1,0 +1,3845 @@
+{
+ "units": "m",
+ "frame": {
+  "left": "+X",
+  "up": "+Y",
+  "forward": "+Z"
+ },
+ "source": "BodyParts3D 3.0 (20110915), (c) The Database Center for Life Science, CC BY-SA 2.1 JP; STL via github.com/Kevin-Mattheus-Moerman/BodyParts3D. Modified: re-oriented, scaled to metres, decimated, grouped. See assets/LICENSE-ASSETS.md",
+ "transformFromBodyParts3D": "p_bonesim = (x, z, -y) / 1000 (BodyParts3D mm, +X left, +Y posterior, +Z superior)",
+ "axisConvention": "World/rest-pose unit vectors. Rotating the CHILD segment about the joint 'center' by +angle (right-hand rule, i.e. THREE.Quaternion.setFromAxisAngle(axis, +angle)) produces the POSITIVE anatomical motion named by the key (flexion, pronation, dorsiflexion, inversion, abduction, internalRotation, ulnarDeviation, ...). This matches src/shared/conventions.js signs, e.g. elbow flexion axis ≈ -X (= Rx(-flex)), knee flexion axis ≈ +X (= Rx(+flex)), forearm pronation axis ≈ -s·Y (= Ry(-s·pron)), ankle dorsiflexion ≈ -X, hip abduction ≈ +s·Z, s = +1 left / -1 right. Spine/neck joints: flexion +X, lateralBend +Z (toward subject's right), axialRotation +Y (toward left).",
+ "restPoseNote": "GLB vertices are at the BodyParts3D rest pose (≈ anatomical position, palms forward) in world coordinates; nodes are NOT re-pivoted. Pivot each segment at joints[segment.joint].center.",
+ "nodes": {
+  "skull": {
+   "segment": "skull",
+   "nameJa": "頭蓋骨（上顎歯を含む）",
+   "nameEn": "Cranium and facial bones (with upper teeth)",
+   "fma": [
+    "FMA52734",
+    "FMA52735",
+    "FMA52788",
+    "FMA52789",
+    "FMA52738",
+    "FMA52739",
+    "FMA52736",
+    "FMA52740",
+    "FMA53649",
+    "FMA53650",
+    "FMA52892",
+    "FMA52893",
+    "FMA53647",
+    "FMA53648",
+    "FMA53645",
+    "FMA53646",
+    "FMA53655",
+    "FMA53656",
+    "FMA54737",
+    "FMA54738",
+    "FMA9710",
+    "FMA55682",
+    "FMA55699",
+    "FMA55690",
+    "FMA55683",
+    "FMA55700",
+    "FMA55691",
+    "FMA55799",
+    "FMA55681",
+    "FMA55698",
+    "FMA55689",
+    "FMA55680",
+    "FMA55697",
+    "FMA55688",
+    "FMA55798"
+   ],
+   "group": "skull"
+  },
+  "mandible": {
+   "segment": "skull",
+   "nameJa": "下顎骨（下顎歯を含む）",
+   "nameEn": "Mandible (with lower teeth)",
+   "fma": [
+    "FMA52748",
+    "FMA57143",
+    "FMA55704",
+    "FMA55693",
+    "FMA57141",
+    "FMA55703",
+    "FMA55692",
+    "FMA55687",
+    "FMA57142",
+    "FMA55705",
+    "FMA55694",
+    "FMA57140",
+    "FMA55706",
+    "FMA55695",
+    "FMA55686"
+   ],
+   "group": "skull"
+  },
+  "hyoid": {
+   "segment": "skull",
+   "nameJa": "舌骨",
+   "nameEn": "Hyoid bone",
+   "fma": "FMA52749",
+   "group": "skull"
+  },
+  "C1": {
+   "segment": "C1",
+   "nameJa": "環椎（第1頸椎）",
+   "nameEn": "Atlas (C1)",
+   "fma": "FMA12519",
+   "group": "spine"
+  },
+  "C2": {
+   "segment": "C2",
+   "nameJa": "軸椎（第2頸椎）",
+   "nameEn": "Axis (C2)",
+   "fma": "FMA12520",
+   "group": "spine"
+  },
+  "C3": {
+   "segment": "C3",
+   "nameJa": "第3頸椎",
+   "nameEn": "third cervical vertebra (C3)",
+   "fma": "FMA12521",
+   "group": "spine"
+  },
+  "C4": {
+   "segment": "C4",
+   "nameJa": "第4頸椎",
+   "nameEn": "fourth cervical vertebra (C4)",
+   "fma": "FMA12522",
+   "group": "spine"
+  },
+  "C5": {
+   "segment": "C5",
+   "nameJa": "第5頸椎",
+   "nameEn": "fifth cervical vertebra (C5)",
+   "fma": "FMA12523",
+   "group": "spine"
+  },
+  "C6": {
+   "segment": "C6",
+   "nameJa": "第6頸椎",
+   "nameEn": "sixth cervical vertebra (C6)",
+   "fma": "FMA12524",
+   "group": "spine"
+  },
+  "C7": {
+   "segment": "C7",
+   "nameJa": "第7頸椎",
+   "nameEn": "seventh cervical vertebra (C7)",
+   "fma": "FMA12525",
+   "group": "spine"
+  },
+  "T1": {
+   "segment": "thorax",
+   "nameJa": "第1胸椎",
+   "nameEn": "Thoracic vertebra T1",
+   "fma": "FMA9165",
+   "group": "thorax"
+  },
+  "T2": {
+   "segment": "thorax",
+   "nameJa": "第2胸椎",
+   "nameEn": "Thoracic vertebra T2",
+   "fma": "FMA9187",
+   "group": "thorax"
+  },
+  "T3": {
+   "segment": "thorax",
+   "nameJa": "第3胸椎",
+   "nameEn": "Thoracic vertebra T3",
+   "fma": "FMA9209",
+   "group": "thorax"
+  },
+  "T4": {
+   "segment": "thorax",
+   "nameJa": "第4胸椎",
+   "nameEn": "Thoracic vertebra T4",
+   "fma": "FMA9248",
+   "group": "thorax"
+  },
+  "T5": {
+   "segment": "thorax",
+   "nameJa": "第5胸椎",
+   "nameEn": "Thoracic vertebra T5",
+   "fma": "FMA9922",
+   "group": "thorax"
+  },
+  "T6": {
+   "segment": "thorax",
+   "nameJa": "第6胸椎",
+   "nameEn": "Thoracic vertebra T6",
+   "fma": "FMA9945",
+   "group": "thorax"
+  },
+  "T7": {
+   "segment": "thorax",
+   "nameJa": "第7胸椎",
+   "nameEn": "Thoracic vertebra T7",
+   "fma": "FMA9968",
+   "group": "thorax"
+  },
+  "T8": {
+   "segment": "thorax",
+   "nameJa": "第8胸椎",
+   "nameEn": "Thoracic vertebra T8",
+   "fma": "FMA9991",
+   "group": "thorax"
+  },
+  "T9": {
+   "segment": "thorax",
+   "nameJa": "第9胸椎",
+   "nameEn": "Thoracic vertebra T9",
+   "fma": "FMA10014",
+   "group": "thorax"
+  },
+  "T10": {
+   "segment": "thorax",
+   "nameJa": "第10胸椎",
+   "nameEn": "Thoracic vertebra T10",
+   "fma": "FMA10037",
+   "group": "thorax"
+  },
+  "T11": {
+   "segment": "thorax",
+   "nameJa": "第11胸椎",
+   "nameEn": "Thoracic vertebra T11",
+   "fma": "FMA10059",
+   "group": "thorax"
+  },
+  "T12": {
+   "segment": "thorax",
+   "nameJa": "第12胸椎",
+   "nameEn": "Thoracic vertebra T12",
+   "fma": "FMA10081",
+   "group": "thorax"
+  },
+  "manubrium": {
+   "segment": "thorax",
+   "nameJa": "胸骨柄",
+   "nameEn": "Manubrium of sternum",
+   "fma": "FMA7486",
+   "group": "thorax"
+  },
+  "sternumBody": {
+   "segment": "thorax",
+   "nameJa": "胸骨体",
+   "nameEn": "Body of sternum",
+   "fma": "FMA7487",
+   "group": "thorax"
+  },
+  "xiphoid": {
+   "segment": "thorax",
+   "nameJa": "剣状突起",
+   "nameEn": "Xiphoid process",
+   "fma": "FMA7488",
+   "group": "thorax"
+  },
+  "rib1_R": {
+   "segment": "thorax",
+   "nameJa": "第1肋骨（右）",
+   "nameEn": "Right rib 1",
+   "fma": "FMA7857",
+   "group": "thorax"
+  },
+  "rib2_R": {
+   "segment": "thorax",
+   "nameJa": "第2肋骨（右）",
+   "nameEn": "Right rib 2",
+   "fma": "FMA7882",
+   "group": "thorax"
+  },
+  "rib3_R": {
+   "segment": "thorax",
+   "nameJa": "第3肋骨（右）",
+   "nameEn": "Right rib 3",
+   "fma": "FMA7909",
+   "group": "thorax"
+  },
+  "rib4_R": {
+   "segment": "thorax",
+   "nameJa": "第4肋骨（右）",
+   "nameEn": "Right rib 4",
+   "fma": "FMA7957",
+   "group": "thorax"
+  },
+  "rib5_R": {
+   "segment": "thorax",
+   "nameJa": "第5肋骨（右）",
+   "nameEn": "Right rib 5",
+   "fma": "FMA8066",
+   "group": "thorax"
+  },
+  "rib6_R": {
+   "segment": "thorax",
+   "nameJa": "第6肋骨（右）",
+   "nameEn": "Right rib 6",
+   "fma": "FMA8175",
+   "group": "thorax"
+  },
+  "rib7_R": {
+   "segment": "thorax",
+   "nameJa": "第7肋骨（右）",
+   "nameEn": "Right rib 7",
+   "fma": "FMA8229",
+   "group": "thorax"
+  },
+  "rib8_R": {
+   "segment": "thorax",
+   "nameJa": "第8肋骨（右）",
+   "nameEn": "Right rib 8",
+   "fma": "FMA8283",
+   "group": "thorax"
+  },
+  "rib9_R": {
+   "segment": "thorax",
+   "nameJa": "第9肋骨（右）",
+   "nameEn": "Right rib 9",
+   "fma": "FMA8364",
+   "group": "thorax"
+  },
+  "rib10_R": {
+   "segment": "thorax",
+   "nameJa": "第10肋骨（右）",
+   "nameEn": "Right rib 10",
+   "fma": "FMA8445",
+   "group": "thorax"
+  },
+  "rib11_R": {
+   "segment": "thorax",
+   "nameJa": "第11肋骨（右）",
+   "nameEn": "Right rib 11",
+   "fma": "FMA8531",
+   "group": "thorax"
+  },
+  "rib12_R": {
+   "segment": "thorax",
+   "nameJa": "第12肋骨（右）",
+   "nameEn": "Right rib 12",
+   "fma": "FMA8533",
+   "group": "thorax"
+  },
+  "costalCartilage_R": {
+   "segment": "thorax",
+   "nameJa": "肋軟骨（右）",
+   "nameEn": "Right costal cartilages 1-10",
+   "fma": [
+    "FMA7875",
+    "FMA7886",
+    "FMA7913",
+    "FMA7976",
+    "FMA8070",
+    "FMA8194",
+    "FMA8248",
+    "BP28"
+   ],
+   "group": "thorax"
+  },
+  "rib1_L": {
+   "segment": "thorax",
+   "nameJa": "第1肋骨（左）",
+   "nameEn": "Left rib 1",
+   "fma": "FMA7987",
+   "group": "thorax"
+  },
+  "rib2_L": {
+   "segment": "thorax",
+   "nameJa": "第2肋骨（左）",
+   "nameEn": "Left rib 2",
+   "fma": "FMA8012",
+   "group": "thorax"
+  },
+  "rib3_L": {
+   "segment": "thorax",
+   "nameJa": "第3肋骨（左）",
+   "nameEn": "Left rib 3",
+   "fma": "FMA8039",
+   "group": "thorax"
+  },
+  "rib4_L": {
+   "segment": "thorax",
+   "nameJa": "第4肋骨（左）",
+   "nameEn": "Left rib 4",
+   "fma": "FMA8148",
+   "group": "thorax"
+  },
+  "rib5_L": {
+   "segment": "thorax",
+   "nameJa": "第5肋骨（左）",
+   "nameEn": "Left rib 5",
+   "fma": "FMA8093",
+   "group": "thorax"
+  },
+  "rib6_L": {
+   "segment": "thorax",
+   "nameJa": "第6肋骨（左）",
+   "nameEn": "Left rib 6",
+   "fma": "FMA8202",
+   "group": "thorax"
+  },
+  "rib7_L": {
+   "segment": "thorax",
+   "nameJa": "第7肋骨（左）",
+   "nameEn": "Left rib 7",
+   "fma": "FMA8256",
+   "group": "thorax"
+  },
+  "rib8_L": {
+   "segment": "thorax",
+   "nameJa": "第8肋骨（左）",
+   "nameEn": "Left rib 8",
+   "fma": "FMA8310",
+   "group": "thorax"
+  },
+  "rib9_L": {
+   "segment": "thorax",
+   "nameJa": "第9肋骨（左）",
+   "nameEn": "Left rib 9",
+   "fma": "FMA8391",
+   "group": "thorax"
+  },
+  "rib10_L": {
+   "segment": "thorax",
+   "nameJa": "第10肋骨（左）",
+   "nameEn": "Left rib 10",
+   "fma": "FMA8472",
+   "group": "thorax"
+  },
+  "rib11_L": {
+   "segment": "thorax",
+   "nameJa": "第11肋骨（左）",
+   "nameEn": "Left rib 11",
+   "fma": "FMA8532",
+   "group": "thorax"
+  },
+  "rib12_L": {
+   "segment": "thorax",
+   "nameJa": "第12肋骨（左）",
+   "nameEn": "Left rib 12",
+   "fma": "FMA8534",
+   "group": "thorax"
+  },
+  "costalCartilage_L": {
+   "segment": "thorax",
+   "nameJa": "肋軟骨（左）",
+   "nameEn": "Left costal cartilages 1-10",
+   "fma": [
+    "FMA8005",
+    "FMA8031",
+    "FMA8058",
+    "FMA8167",
+    "FMA8112",
+    "FMA8221",
+    "FMA8275",
+    "BP24"
+   ],
+   "group": "thorax"
+  },
+  "L1": {
+   "segment": "L1",
+   "nameJa": "第1腰椎",
+   "nameEn": "Lumbar vertebra L1",
+   "fma": "FMA13072",
+   "group": "spine"
+  },
+  "L2": {
+   "segment": "L2",
+   "nameJa": "第2腰椎",
+   "nameEn": "Lumbar vertebra L2",
+   "fma": "FMA13073",
+   "group": "spine"
+  },
+  "L3": {
+   "segment": "L3",
+   "nameJa": "第3腰椎",
+   "nameEn": "Lumbar vertebra L3",
+   "fma": "FMA13074",
+   "group": "spine"
+  },
+  "L4": {
+   "segment": "L4",
+   "nameJa": "第4腰椎",
+   "nameEn": "Lumbar vertebra L4",
+   "fma": "FMA13075",
+   "group": "spine"
+  },
+  "L5": {
+   "segment": "L5",
+   "nameJa": "第5腰椎",
+   "nameEn": "Lumbar vertebra L5",
+   "fma": "FMA13076",
+   "group": "spine"
+  },
+  "sacrum": {
+   "segment": "pelvis",
+   "nameJa": "仙骨",
+   "nameEn": "Sacrum",
+   "fma": "FMA16202",
+   "group": "pelvis"
+  },
+  "hipBone_R": {
+   "segment": "pelvis",
+   "nameJa": "寛骨（右）",
+   "nameEn": "Right hip bone",
+   "fma": "FMA16586",
+   "group": "pelvis"
+  },
+  "hipBone_L": {
+   "segment": "pelvis",
+   "nameJa": "寛骨（左）",
+   "nameEn": "Left hip bone",
+   "fma": "FMA16587",
+   "group": "pelvis"
+  },
+  "clavicle_R": {
+   "segment": "clavicle_R",
+   "nameJa": "鎖骨（右）",
+   "nameEn": "Right clavicle",
+   "fma": "FMA13322",
+   "group": "upperLimb"
+  },
+  "scapula_R": {
+   "segment": "scapula_R",
+   "nameJa": "肩甲骨（右）",
+   "nameEn": "Right scapula",
+   "fma": "FMA13395",
+   "group": "upperLimb"
+  },
+  "humerus_R": {
+   "segment": "humerus_R",
+   "nameJa": "上腕骨（右）",
+   "nameEn": "Right humerus",
+   "fma": "FMA23130",
+   "group": "upperLimb"
+  },
+  "ulna_R": {
+   "segment": "ulna_R",
+   "nameJa": "尺骨（右）",
+   "nameEn": "Right ulna",
+   "fma": "FMA23467",
+   "group": "upperLimb"
+  },
+  "radius_R": {
+   "segment": "radius_R",
+   "nameJa": "橈骨（右）",
+   "nameEn": "Right radius",
+   "fma": "FMA23464",
+   "group": "upperLimb"
+  },
+  "scaphoid_R": {
+   "segment": "carpalsProximal_R",
+   "nameJa": "舟状骨（右）",
+   "nameEn": "Right scaphoid",
+   "fma": "FMA24435",
+   "group": "hand"
+  },
+  "lunate_R": {
+   "segment": "carpalsProximal_R",
+   "nameJa": "月状骨（右）",
+   "nameEn": "Right lunate",
+   "fma": "FMA24437",
+   "group": "hand"
+  },
+  "triquetrum_R": {
+   "segment": "carpalsProximal_R",
+   "nameJa": "三角骨（右）",
+   "nameEn": "Right triquetrum",
+   "fma": "FMA24439",
+   "group": "hand"
+  },
+  "pisiform_R": {
+   "segment": "carpalsProximal_R",
+   "nameJa": "豆状骨（右）",
+   "nameEn": "Right pisiform",
+   "fma": "FMA24441",
+   "group": "hand"
+  },
+  "trapezium_R": {
+   "segment": "hand_R",
+   "nameJa": "大菱形骨（右）",
+   "nameEn": "Right trapezium",
+   "fma": "FMA24443",
+   "group": "hand"
+  },
+  "trapezoid_R": {
+   "segment": "hand_R",
+   "nameJa": "小菱形骨（右）",
+   "nameEn": "Right trapezoid",
+   "fma": "FMA23725",
+   "group": "hand"
+  },
+  "capitate_R": {
+   "segment": "hand_R",
+   "nameJa": "有頭骨（右）",
+   "nameEn": "Right capitate",
+   "fma": "FMA24446",
+   "group": "hand"
+  },
+  "hamate_R": {
+   "segment": "hand_R",
+   "nameJa": "有鉤骨（右）",
+   "nameEn": "Right hamate",
+   "fma": "FMA24448",
+   "group": "hand"
+  },
+  "metacarpal1_R": {
+   "segment": "thumbMeta_R",
+   "nameJa": "第1中手骨（右）",
+   "nameEn": "Right first metacarpal",
+   "fma": "FMA24464",
+   "group": "hand"
+  },
+  "metacarpal2_R": {
+   "segment": "hand_R",
+   "nameJa": "第2中手骨（右）",
+   "nameEn": "Right second metacarpal",
+   "fma": "FMA24466",
+   "group": "hand"
+  },
+  "metacarpal3_R": {
+   "segment": "hand_R",
+   "nameJa": "第3中手骨（右）",
+   "nameEn": "Right third metacarpal",
+   "fma": "FMA24468",
+   "group": "hand"
+  },
+  "metacarpal4_R": {
+   "segment": "hand_R",
+   "nameJa": "第4中手骨（右）",
+   "nameEn": "Right fourth metacarpal",
+   "fma": "FMA24470",
+   "group": "hand"
+  },
+  "metacarpal5_R": {
+   "segment": "hand_R",
+   "nameJa": "第5中手骨（右）",
+   "nameEn": "Right fifth metacarpal",
+   "fma": "FMA24472",
+   "group": "hand"
+  },
+  "thumbProx_R": {
+   "segment": "thumbProx_R",
+   "nameJa": "母指基節骨（右）",
+   "nameEn": "Right proximal phalanx of thumb",
+   "fma": "FMA24450",
+   "group": "hand"
+  },
+  "thumbDist_R": {
+   "segment": "thumbDist_R",
+   "nameJa": "母指末節骨（右）",
+   "nameEn": "Right distal phalanx of thumb",
+   "fma": "FMA24459",
+   "group": "hand"
+  },
+  "indexProx_R": {
+   "segment": "indexProx_R",
+   "nameJa": "示指基節骨（右）",
+   "nameEn": "Right proximal phalanx of index finger",
+   "fma": "FMA24451",
+   "group": "hand"
+  },
+  "indexMid_R": {
+   "segment": "indexMid_R",
+   "nameJa": "示指中節骨（右）",
+   "nameEn": "Right middle phalanx of index finger",
+   "fma": "FMA24455",
+   "group": "hand"
+  },
+  "indexDist_R": {
+   "segment": "indexDist_R",
+   "nameJa": "示指末節骨（右）",
+   "nameEn": "Right distal phalanx of index finger",
+   "fma": "FMA24460",
+   "group": "hand"
+  },
+  "middleProx_R": {
+   "segment": "middleProx_R",
+   "nameJa": "中指基節骨（右）",
+   "nameEn": "Right proximal phalanx of middle finger",
+   "fma": "FMA24452",
+   "group": "hand"
+  },
+  "middleMid_R": {
+   "segment": "middleMid_R",
+   "nameJa": "中指中節骨（右）",
+   "nameEn": "Right middle phalanx of middle finger",
+   "fma": "FMA24456",
+   "group": "hand"
+  },
+  "middleDist_R": {
+   "segment": "middleDist_R",
+   "nameJa": "中指末節骨（右）",
+   "nameEn": "Right distal phalanx of middle finger",
+   "fma": "FMA24461",
+   "group": "hand"
+  },
+  "ringProx_R": {
+   "segment": "ringProx_R",
+   "nameJa": "環指基節骨（右）",
+   "nameEn": "Right proximal phalanx of ring finger",
+   "fma": "FMA24453",
+   "group": "hand"
+  },
+  "ringMid_R": {
+   "segment": "ringMid_R",
+   "nameJa": "環指中節骨（右）",
+   "nameEn": "Right middle phalanx of ring finger",
+   "fma": "FMA24457",
+   "group": "hand"
+  },
+  "ringDist_R": {
+   "segment": "ringDist_R",
+   "nameJa": "環指末節骨（右）",
+   "nameEn": "Right distal phalanx of ring finger",
+   "fma": "FMA24462",
+   "group": "hand"
+  },
+  "littleProx_R": {
+   "segment": "littleProx_R",
+   "nameJa": "小指基節骨（右）",
+   "nameEn": "Right proximal phalanx of little finger",
+   "fma": "FMA24454",
+   "group": "hand"
+  },
+  "littleMid_R": {
+   "segment": "littleMid_R",
+   "nameJa": "小指中節骨（右）",
+   "nameEn": "Right middle phalanx of little finger",
+   "fma": "FMA24458",
+   "group": "hand"
+  },
+  "littleDist_R": {
+   "segment": "littleDist_R",
+   "nameJa": "小指末節骨（右）",
+   "nameEn": "Right distal phalanx of little finger",
+   "fma": "FMA24463",
+   "group": "hand"
+  },
+  "femur_R": {
+   "segment": "femur_R",
+   "nameJa": "大腿骨（右）",
+   "nameEn": "Right femur",
+   "fma": "FMA24474",
+   "group": "lowerLimb"
+  },
+  "patella_R": {
+   "segment": "patella_R",
+   "nameJa": "膝蓋骨（右）",
+   "nameEn": "Right patella",
+   "fma": "FMA24486",
+   "group": "lowerLimb"
+  },
+  "tibia_R": {
+   "segment": "tibia_R",
+   "nameJa": "脛骨（右）",
+   "nameEn": "Right tibia",
+   "fma": "FMA24477",
+   "group": "lowerLimb"
+  },
+  "fibula_R": {
+   "segment": "tibia_R",
+   "nameJa": "腓骨（右）",
+   "nameEn": "Right fibula",
+   "fma": "FMA24480",
+   "group": "lowerLimb"
+  },
+  "talus_R": {
+   "segment": "talus_R",
+   "nameJa": "距骨（右）",
+   "nameEn": "Right talus",
+   "fma": "FMA24482",
+   "group": "foot"
+  },
+  "calcaneus_R": {
+   "segment": "foot_R",
+   "nameJa": "踵骨（右）",
+   "nameEn": "Right calcaneus",
+   "fma": "FMA24497",
+   "group": "foot"
+  },
+  "navicular_R": {
+   "segment": "foot_R",
+   "nameJa": "舟状骨（足）（右）",
+   "nameEn": "Right navicular",
+   "fma": "FMA24500",
+   "group": "foot"
+  },
+  "cuboid_R": {
+   "segment": "foot_R",
+   "nameJa": "立方骨（右）",
+   "nameEn": "Right cuboid",
+   "fma": "FMA24528",
+   "group": "foot"
+  },
+  "cuneiformMedial_R": {
+   "segment": "foot_R",
+   "nameJa": "内側楔状骨（右）",
+   "nameEn": "Right medial cuneiform",
+   "fma": "FMA24521",
+   "group": "foot"
+  },
+  "cuneiformIntermediate_R": {
+   "segment": "foot_R",
+   "nameJa": "中間楔状骨（右）",
+   "nameEn": "Right intermediate cuneiform",
+   "fma": "FMA24523",
+   "group": "foot"
+  },
+  "cuneiformLateral_R": {
+   "segment": "foot_R",
+   "nameJa": "外側楔状骨（右）",
+   "nameEn": "Right lateral cuneiform",
+   "fma": "FMA24525",
+   "group": "foot"
+  },
+  "metatarsal1_R": {
+   "segment": "foot_R",
+   "nameJa": "第1中足骨（右）",
+   "nameEn": "Right first metatarsal",
+   "fma": "FMA24507",
+   "group": "foot"
+  },
+  "metatarsal2_R": {
+   "segment": "foot_R",
+   "nameJa": "第2中足骨（右）",
+   "nameEn": "Right second metatarsal",
+   "fma": "FMA24509",
+   "group": "foot"
+  },
+  "metatarsal3_R": {
+   "segment": "foot_R",
+   "nameJa": "第3中足骨（右）",
+   "nameEn": "Right third metatarsal",
+   "fma": "FMA24511",
+   "group": "foot"
+  },
+  "metatarsal4_R": {
+   "segment": "foot_R",
+   "nameJa": "第4中足骨（右）",
+   "nameEn": "Right fourth metatarsal",
+   "fma": "FMA24513",
+   "group": "foot"
+  },
+  "metatarsal5_R": {
+   "segment": "foot_R",
+   "nameJa": "第5中足骨（右）",
+   "nameEn": "Right fifth metatarsal",
+   "fma": "FMA24515",
+   "group": "foot"
+  },
+  "toePhalanges_R": {
+   "segment": "foot_R",
+   "nameJa": "足の趾骨・種子骨（右）",
+   "nameEn": "Right phalanges of toes and sesamoids",
+   "fma": [
+    "FMA43253",
+    "FMA32650",
+    "FMA32634",
+    "FMA32642",
+    "FMA32652",
+    "FMA32636",
+    "FMA32644",
+    "FMA32654",
+    "FMA32638",
+    "FMA32646",
+    "FMA32656",
+    "FMA32640",
+    "FMA230986",
+    "FMA32658",
+    "FMA45097"
+   ],
+   "group": "foot"
+  },
+  "clavicle_L": {
+   "segment": "clavicle_L",
+   "nameJa": "鎖骨（左）",
+   "nameEn": "Left clavicle",
+   "fma": "FMA13323",
+   "group": "upperLimb"
+  },
+  "scapula_L": {
+   "segment": "scapula_L",
+   "nameJa": "肩甲骨（左）",
+   "nameEn": "Left scapula",
+   "fma": "FMA13396",
+   "group": "upperLimb"
+  },
+  "humerus_L": {
+   "segment": "humerus_L",
+   "nameJa": "上腕骨（左）",
+   "nameEn": "Left humerus",
+   "fma": "FMA23131",
+   "group": "upperLimb"
+  },
+  "ulna_L": {
+   "segment": "ulna_L",
+   "nameJa": "尺骨（左）",
+   "nameEn": "Left ulna",
+   "fma": "FMA23468",
+   "group": "upperLimb"
+  },
+  "radius_L": {
+   "segment": "radius_L",
+   "nameJa": "橈骨（左）",
+   "nameEn": "Left radius",
+   "fma": "FMA23465",
+   "group": "upperLimb"
+  },
+  "scaphoid_L": {
+   "segment": "carpalsProximal_L",
+   "nameJa": "舟状骨（左）",
+   "nameEn": "Left scaphoid",
+   "fma": "FMA24436",
+   "group": "hand"
+  },
+  "lunate_L": {
+   "segment": "carpalsProximal_L",
+   "nameJa": "月状骨（左）",
+   "nameEn": "Left lunate",
+   "fma": "FMA24438",
+   "group": "hand"
+  },
+  "triquetrum_L": {
+   "segment": "carpalsProximal_L",
+   "nameJa": "三角骨（左）",
+   "nameEn": "Left triquetrum",
+   "fma": "FMA24440",
+   "group": "hand"
+  },
+  "pisiform_L": {
+   "segment": "carpalsProximal_L",
+   "nameJa": "豆状骨（左）",
+   "nameEn": "Left pisiform",
+   "fma": "FMA24442",
+   "group": "hand"
+  },
+  "trapezium_L": {
+   "segment": "hand_L",
+   "nameJa": "大菱形骨（左）",
+   "nameEn": "Left trapezium",
+   "fma": "FMA24444",
+   "group": "hand"
+  },
+  "trapezoid_L": {
+   "segment": "hand_L",
+   "nameJa": "小菱形骨（左）",
+   "nameEn": "Left trapezoid",
+   "fma": "FMA24445",
+   "group": "hand"
+  },
+  "capitate_L": {
+   "segment": "hand_L",
+   "nameJa": "有頭骨（左）",
+   "nameEn": "Left capitate",
+   "fma": "FMA24447",
+   "group": "hand"
+  },
+  "hamate_L": {
+   "segment": "hand_L",
+   "nameJa": "有鉤骨（左）",
+   "nameEn": "Left hamate",
+   "fma": "FMA24449",
+   "group": "hand"
+  },
+  "metacarpal1_L": {
+   "segment": "thumbMeta_L",
+   "nameJa": "第1中手骨（左）",
+   "nameEn": "Left first metacarpal",
+   "fma": "FMA24465",
+   "group": "hand"
+  },
+  "metacarpal2_L": {
+   "segment": "hand_L",
+   "nameJa": "第2中手骨（左）",
+   "nameEn": "Left second metacarpal",
+   "fma": "FMA24467",
+   "group": "hand"
+  },
+  "metacarpal3_L": {
+   "segment": "hand_L",
+   "nameJa": "第3中手骨（左）",
+   "nameEn": "Left third metacarpal",
+   "fma": "FMA24469",
+   "group": "hand"
+  },
+  "metacarpal4_L": {
+   "segment": "hand_L",
+   "nameJa": "第4中手骨（左）",
+   "nameEn": "Left fourth metacarpal",
+   "fma": "FMA24471",
+   "group": "hand"
+  },
+  "metacarpal5_L": {
+   "segment": "hand_L",
+   "nameJa": "第5中手骨（左）",
+   "nameEn": "Left fifth metacarpal",
+   "fma": "FMA24473",
+   "group": "hand"
+  },
+  "thumbProx_L": {
+   "segment": "thumbProx_L",
+   "nameJa": "母指基節骨（左）",
+   "nameEn": "Left proximal phalanx of thumb",
+   "fma": "FMA65470",
+   "group": "hand"
+  },
+  "thumbDist_L": {
+   "segment": "thumbDist_L",
+   "nameJa": "母指末節骨（左）",
+   "nameEn": "Left distal phalanx of thumb",
+   "fma": "FMA23951",
+   "group": "hand"
+  },
+  "indexProx_L": {
+   "segment": "indexProx_L",
+   "nameJa": "示指基節骨（左）",
+   "nameEn": "Left proximal phalanx of index finger",
+   "fma": "FMA71915",
+   "group": "hand"
+  },
+  "indexMid_L": {
+   "segment": "indexMid_L",
+   "nameJa": "示指中節骨（左）",
+   "nameEn": "Left middle phalanx of index finger",
+   "fma": "FMA23938",
+   "group": "hand"
+  },
+  "indexDist_L": {
+   "segment": "indexDist_L",
+   "nameJa": "示指末節骨（左）",
+   "nameEn": "Left distal phalanx of index finger",
+   "fma": "FMA23953",
+   "group": "hand"
+  },
+  "middleProx_L": {
+   "segment": "middleProx_L",
+   "nameJa": "中指基節骨（左）",
+   "nameEn": "Left proximal phalanx of middle finger",
+   "fma": "FMA71908",
+   "group": "hand"
+  },
+  "middleMid_L": {
+   "segment": "middleMid_L",
+   "nameJa": "中指中節骨（左）",
+   "nameEn": "Left middle phalanx of middle finger",
+   "fma": "FMA23940",
+   "group": "hand"
+  },
+  "middleDist_L": {
+   "segment": "middleDist_L",
+   "nameJa": "中指末節骨（左）",
+   "nameEn": "Left distal phalanx of middle finger",
+   "fma": "FMA23955",
+   "group": "hand"
+  },
+  "ringProx_L": {
+   "segment": "ringProx_L",
+   "nameJa": "環指基節骨（左）",
+   "nameEn": "Left proximal phalanx of ring finger",
+   "fma": "FMA71916",
+   "group": "hand"
+  },
+  "ringMid_L": {
+   "segment": "ringMid_L",
+   "nameJa": "環指中節骨（左）",
+   "nameEn": "Left middle phalanx of ring finger",
+   "fma": "FMA23942",
+   "group": "hand"
+  },
+  "ringDist_L": {
+   "segment": "ringDist_L",
+   "nameJa": "環指末節骨（左）",
+   "nameEn": "Left distal phalanx of ring finger",
+   "fma": "FMA23957",
+   "group": "hand"
+  },
+  "littleProx_L": {
+   "segment": "littleProx_L",
+   "nameJa": "小指基節骨（左）",
+   "nameEn": "Left proximal phalanx of little finger",
+   "fma": "FMA66791",
+   "group": "hand"
+  },
+  "littleMid_L": {
+   "segment": "littleMid_L",
+   "nameJa": "小指中節骨（左）",
+   "nameEn": "Left middle phalanx of little finger",
+   "fma": "FMA23944",
+   "group": "hand"
+  },
+  "littleDist_L": {
+   "segment": "littleDist_L",
+   "nameJa": "小指末節骨（左）",
+   "nameEn": "Left distal phalanx of little finger",
+   "fma": "FMA23959",
+   "group": "hand"
+  },
+  "femur_L": {
+   "segment": "femur_L",
+   "nameJa": "大腿骨（左）",
+   "nameEn": "Left femur",
+   "fma": "FMA24475",
+   "group": "lowerLimb"
+  },
+  "patella_L": {
+   "segment": "patella_L",
+   "nameJa": "膝蓋骨（左）",
+   "nameEn": "Left patella",
+   "fma": "FMA24487",
+   "group": "lowerLimb"
+  },
+  "tibia_L": {
+   "segment": "tibia_L",
+   "nameJa": "脛骨（左）",
+   "nameEn": "Left tibia",
+   "fma": "FMA24478",
+   "group": "lowerLimb"
+  },
+  "fibula_L": {
+   "segment": "tibia_L",
+   "nameJa": "腓骨（左）",
+   "nameEn": "Left fibula",
+   "fma": "FMA24481",
+   "group": "lowerLimb"
+  },
+  "talus_L": {
+   "segment": "talus_L",
+   "nameJa": "距骨（左）",
+   "nameEn": "Left talus",
+   "fma": "FMA24483",
+   "group": "foot"
+  },
+  "calcaneus_L": {
+   "segment": "foot_L",
+   "nameJa": "踵骨（左）",
+   "nameEn": "Left calcaneus",
+   "fma": "FMA24498",
+   "group": "foot"
+  },
+  "navicular_L": {
+   "segment": "foot_L",
+   "nameJa": "舟状骨（足）（左）",
+   "nameEn": "Left navicular",
+   "fma": "FMA24501",
+   "group": "foot"
+  },
+  "cuboid_L": {
+   "segment": "foot_L",
+   "nameJa": "立方骨（左）",
+   "nameEn": "Left cuboid",
+   "fma": "FMA24529",
+   "group": "foot"
+  },
+  "cuneiformMedial_L": {
+   "segment": "foot_L",
+   "nameJa": "内側楔状骨（左）",
+   "nameEn": "Left medial cuneiform",
+   "fma": "FMA24522",
+   "group": "foot"
+  },
+  "cuneiformIntermediate_L": {
+   "segment": "foot_L",
+   "nameJa": "中間楔状骨（左）",
+   "nameEn": "Left intermediate cuneiform",
+   "fma": "FMA24524",
+   "group": "foot"
+  },
+  "cuneiformLateral_L": {
+   "segment": "foot_L",
+   "nameJa": "外側楔状骨（左）",
+   "nameEn": "Left lateral cuneiform",
+   "fma": "FMA24526",
+   "group": "foot"
+  },
+  "metatarsal1_L": {
+   "segment": "foot_L",
+   "nameJa": "第1中足骨（左）",
+   "nameEn": "Left first metatarsal",
+   "fma": "FMA24508",
+   "group": "foot"
+  },
+  "metatarsal2_L": {
+   "segment": "foot_L",
+   "nameJa": "第2中足骨（左）",
+   "nameEn": "Left second metatarsal",
+   "fma": "FMA24510",
+   "group": "foot"
+  },
+  "metatarsal3_L": {
+   "segment": "foot_L",
+   "nameJa": "第3中足骨（左）",
+   "nameEn": "Left third metatarsal",
+   "fma": "FMA24512",
+   "group": "foot"
+  },
+  "metatarsal4_L": {
+   "segment": "foot_L",
+   "nameJa": "第4中足骨（左）",
+   "nameEn": "Left fourth metatarsal",
+   "fma": "FMA24514",
+   "group": "foot"
+  },
+  "metatarsal5_L": {
+   "segment": "foot_L",
+   "nameJa": "第5中足骨（左）",
+   "nameEn": "Left fifth metatarsal",
+   "fma": "FMA24516",
+   "group": "foot"
+  },
+  "toePhalanges_L": {
+   "segment": "foot_L",
+   "nameJa": "足の趾骨・種子骨（左）",
+   "nameEn": "Left phalanges of toes and sesamoids",
+   "fma": [
+    "FMA43254",
+    "FMA32651",
+    "FMA32635",
+    "FMA32643",
+    "FMA32653",
+    "FMA32637",
+    "FMA32645",
+    "FMA32655",
+    "FMA32639",
+    "FMA32647",
+    "FMA32657",
+    "FMA32641",
+    "FMA230988",
+    "FMA32659",
+    "FMA45098"
+   ],
+   "group": "foot"
+  },
+  "skin": {
+   "segment": null,
+   "nameJa": "皮膚（体表）",
+   "nameEn": "Skin (body surface, decimated)",
+   "fma": "FMA7163",
+   "group": "skin"
+  }
+ },
+ "segments": {
+  "pelvis": {
+   "parent": null,
+   "joint": null,
+   "nodes": [
+    "sacrum",
+    "hipBone_R",
+    "hipBone_L"
+   ]
+  },
+  "L5": {
+   "parent": "pelvis",
+   "joint": "lumbosacral",
+   "nodes": [
+    "L5"
+   ]
+  },
+  "L4": {
+   "parent": "L5",
+   "joint": "L4L5",
+   "nodes": [
+    "L4"
+   ]
+  },
+  "L3": {
+   "parent": "L4",
+   "joint": "L3L4",
+   "nodes": [
+    "L3"
+   ]
+  },
+  "L2": {
+   "parent": "L3",
+   "joint": "L2L3",
+   "nodes": [
+    "L2"
+   ]
+  },
+  "L1": {
+   "parent": "L2",
+   "joint": "L1L2",
+   "nodes": [
+    "L1"
+   ]
+  },
+  "thorax": {
+   "parent": "L1",
+   "joint": "T12L1",
+   "nodes": [
+    "T1",
+    "T2",
+    "T3",
+    "T4",
+    "T5",
+    "T6",
+    "T7",
+    "T8",
+    "T9",
+    "T10",
+    "T11",
+    "T12",
+    "manubrium",
+    "sternumBody",
+    "xiphoid",
+    "rib1_R",
+    "rib2_R",
+    "rib3_R",
+    "rib4_R",
+    "rib5_R",
+    "rib6_R",
+    "rib7_R",
+    "rib8_R",
+    "rib9_R",
+    "rib10_R",
+    "rib11_R",
+    "rib12_R",
+    "costalCartilage_R",
+    "rib1_L",
+    "rib2_L",
+    "rib3_L",
+    "rib4_L",
+    "rib5_L",
+    "rib6_L",
+    "rib7_L",
+    "rib8_L",
+    "rib9_L",
+    "rib10_L",
+    "rib11_L",
+    "rib12_L",
+    "costalCartilage_L"
+   ]
+  },
+  "C7": {
+   "parent": "thorax",
+   "joint": "C7T1",
+   "nodes": [
+    "C7"
+   ]
+  },
+  "C6": {
+   "parent": "C7",
+   "joint": "C6C7",
+   "nodes": [
+    "C6"
+   ]
+  },
+  "C5": {
+   "parent": "C6",
+   "joint": "C5C6",
+   "nodes": [
+    "C5"
+   ]
+  },
+  "C4": {
+   "parent": "C5",
+   "joint": "C4C5",
+   "nodes": [
+    "C4"
+   ]
+  },
+  "C3": {
+   "parent": "C4",
+   "joint": "C3C4",
+   "nodes": [
+    "C3"
+   ]
+  },
+  "C2": {
+   "parent": "C3",
+   "joint": "C2C3",
+   "nodes": [
+    "C2"
+   ]
+  },
+  "C1": {
+   "parent": "C2",
+   "joint": "C1C2",
+   "nodes": [
+    "C1"
+   ]
+  },
+  "skull": {
+   "parent": "C1",
+   "joint": "atlantooccipital",
+   "nodes": [
+    "skull",
+    "mandible",
+    "hyoid"
+   ]
+  },
+  "clavicle_L": {
+   "parent": "thorax",
+   "joint": "sternoclavicular_L",
+   "nodes": [
+    "clavicle_L"
+   ]
+  },
+  "scapula_L": {
+   "parent": "clavicle_L",
+   "joint": "acromioclavicular_L",
+   "nodes": [
+    "scapula_L"
+   ]
+  },
+  "humerus_L": {
+   "parent": "scapula_L",
+   "joint": "glenohumeral_L",
+   "nodes": [
+    "humerus_L"
+   ]
+  },
+  "ulna_L": {
+   "parent": "humerus_L",
+   "joint": "humeroulnar_L",
+   "nodes": [
+    "ulna_L"
+   ]
+  },
+  "radius_L": {
+   "parent": "ulna_L",
+   "joint": "radioulnar_L",
+   "nodes": [
+    "radius_L"
+   ]
+  },
+  "carpalsProximal_L": {
+   "parent": "radius_L",
+   "joint": "radiocarpal_L",
+   "nodes": [
+    "scaphoid_L",
+    "lunate_L",
+    "triquetrum_L",
+    "pisiform_L"
+   ]
+  },
+  "hand_L": {
+   "parent": "carpalsProximal_L",
+   "joint": "midcarpal_L",
+   "nodes": [
+    "trapezium_L",
+    "trapezoid_L",
+    "capitate_L",
+    "hamate_L",
+    "metacarpal2_L",
+    "metacarpal3_L",
+    "metacarpal4_L",
+    "metacarpal5_L"
+   ]
+  },
+  "thumbMeta_L": {
+   "parent": "hand_L",
+   "joint": "cmc1_L",
+   "nodes": [
+    "metacarpal1_L"
+   ]
+  },
+  "thumbProx_L": {
+   "parent": "thumbMeta_L",
+   "joint": "mcp1_L",
+   "nodes": [
+    "thumbProx_L"
+   ]
+  },
+  "thumbDist_L": {
+   "parent": "thumbProx_L",
+   "joint": "ip1_L",
+   "nodes": [
+    "thumbDist_L"
+   ]
+  },
+  "femur_L": {
+   "parent": "pelvis",
+   "joint": "hip_L",
+   "nodes": [
+    "femur_L"
+   ]
+  },
+  "tibia_L": {
+   "parent": "femur_L",
+   "joint": "knee_L",
+   "nodes": [
+    "tibia_L",
+    "fibula_L"
+   ]
+  },
+  "patella_L": {
+   "parent": "femur_L",
+   "joint": "patellofemoral_L",
+   "nodes": [
+    "patella_L"
+   ]
+  },
+  "talus_L": {
+   "parent": "tibia_L",
+   "joint": "talocrural_L",
+   "nodes": [
+    "talus_L"
+   ]
+  },
+  "foot_L": {
+   "parent": "talus_L",
+   "joint": "subtalar_L",
+   "nodes": [
+    "calcaneus_L",
+    "navicular_L",
+    "cuboid_L",
+    "cuneiformMedial_L",
+    "cuneiformIntermediate_L",
+    "cuneiformLateral_L",
+    "metatarsal1_L",
+    "metatarsal2_L",
+    "metatarsal3_L",
+    "metatarsal4_L",
+    "metatarsal5_L",
+    "toePhalanges_L"
+   ]
+  },
+  "indexProx_L": {
+   "parent": "hand_L",
+   "joint": "mcp2_L",
+   "nodes": [
+    "indexProx_L"
+   ]
+  },
+  "indexMid_L": {
+   "parent": "indexProx_L",
+   "joint": "pip2_L",
+   "nodes": [
+    "indexMid_L"
+   ]
+  },
+  "indexDist_L": {
+   "parent": "indexMid_L",
+   "joint": "dip2_L",
+   "nodes": [
+    "indexDist_L"
+   ]
+  },
+  "middleProx_L": {
+   "parent": "hand_L",
+   "joint": "mcp3_L",
+   "nodes": [
+    "middleProx_L"
+   ]
+  },
+  "middleMid_L": {
+   "parent": "middleProx_L",
+   "joint": "pip3_L",
+   "nodes": [
+    "middleMid_L"
+   ]
+  },
+  "middleDist_L": {
+   "parent": "middleMid_L",
+   "joint": "dip3_L",
+   "nodes": [
+    "middleDist_L"
+   ]
+  },
+  "ringProx_L": {
+   "parent": "hand_L",
+   "joint": "mcp4_L",
+   "nodes": [
+    "ringProx_L"
+   ]
+  },
+  "ringMid_L": {
+   "parent": "ringProx_L",
+   "joint": "pip4_L",
+   "nodes": [
+    "ringMid_L"
+   ]
+  },
+  "ringDist_L": {
+   "parent": "ringMid_L",
+   "joint": "dip4_L",
+   "nodes": [
+    "ringDist_L"
+   ]
+  },
+  "littleProx_L": {
+   "parent": "hand_L",
+   "joint": "mcp5_L",
+   "nodes": [
+    "littleProx_L"
+   ]
+  },
+  "littleMid_L": {
+   "parent": "littleProx_L",
+   "joint": "pip5_L",
+   "nodes": [
+    "littleMid_L"
+   ]
+  },
+  "littleDist_L": {
+   "parent": "littleMid_L",
+   "joint": "dip5_L",
+   "nodes": [
+    "littleDist_L"
+   ]
+  },
+  "clavicle_R": {
+   "parent": "thorax",
+   "joint": "sternoclavicular_R",
+   "nodes": [
+    "clavicle_R"
+   ]
+  },
+  "scapula_R": {
+   "parent": "clavicle_R",
+   "joint": "acromioclavicular_R",
+   "nodes": [
+    "scapula_R"
+   ]
+  },
+  "humerus_R": {
+   "parent": "scapula_R",
+   "joint": "glenohumeral_R",
+   "nodes": [
+    "humerus_R"
+   ]
+  },
+  "ulna_R": {
+   "parent": "humerus_R",
+   "joint": "humeroulnar_R",
+   "nodes": [
+    "ulna_R"
+   ]
+  },
+  "radius_R": {
+   "parent": "ulna_R",
+   "joint": "radioulnar_R",
+   "nodes": [
+    "radius_R"
+   ]
+  },
+  "carpalsProximal_R": {
+   "parent": "radius_R",
+   "joint": "radiocarpal_R",
+   "nodes": [
+    "scaphoid_R",
+    "lunate_R",
+    "triquetrum_R",
+    "pisiform_R"
+   ]
+  },
+  "hand_R": {
+   "parent": "carpalsProximal_R",
+   "joint": "midcarpal_R",
+   "nodes": [
+    "trapezium_R",
+    "trapezoid_R",
+    "capitate_R",
+    "hamate_R",
+    "metacarpal2_R",
+    "metacarpal3_R",
+    "metacarpal4_R",
+    "metacarpal5_R"
+   ]
+  },
+  "thumbMeta_R": {
+   "parent": "hand_R",
+   "joint": "cmc1_R",
+   "nodes": [
+    "metacarpal1_R"
+   ]
+  },
+  "thumbProx_R": {
+   "parent": "thumbMeta_R",
+   "joint": "mcp1_R",
+   "nodes": [
+    "thumbProx_R"
+   ]
+  },
+  "thumbDist_R": {
+   "parent": "thumbProx_R",
+   "joint": "ip1_R",
+   "nodes": [
+    "thumbDist_R"
+   ]
+  },
+  "femur_R": {
+   "parent": "pelvis",
+   "joint": "hip_R",
+   "nodes": [
+    "femur_R"
+   ]
+  },
+  "tibia_R": {
+   "parent": "femur_R",
+   "joint": "knee_R",
+   "nodes": [
+    "tibia_R",
+    "fibula_R"
+   ]
+  },
+  "patella_R": {
+   "parent": "femur_R",
+   "joint": "patellofemoral_R",
+   "nodes": [
+    "patella_R"
+   ]
+  },
+  "talus_R": {
+   "parent": "tibia_R",
+   "joint": "talocrural_R",
+   "nodes": [
+    "talus_R"
+   ]
+  },
+  "foot_R": {
+   "parent": "talus_R",
+   "joint": "subtalar_R",
+   "nodes": [
+    "calcaneus_R",
+    "navicular_R",
+    "cuboid_R",
+    "cuneiformMedial_R",
+    "cuneiformIntermediate_R",
+    "cuneiformLateral_R",
+    "metatarsal1_R",
+    "metatarsal2_R",
+    "metatarsal3_R",
+    "metatarsal4_R",
+    "metatarsal5_R",
+    "toePhalanges_R"
+   ]
+  },
+  "indexProx_R": {
+   "parent": "hand_R",
+   "joint": "mcp2_R",
+   "nodes": [
+    "indexProx_R"
+   ]
+  },
+  "indexMid_R": {
+   "parent": "indexProx_R",
+   "joint": "pip2_R",
+   "nodes": [
+    "indexMid_R"
+   ]
+  },
+  "indexDist_R": {
+   "parent": "indexMid_R",
+   "joint": "dip2_R",
+   "nodes": [
+    "indexDist_R"
+   ]
+  },
+  "middleProx_R": {
+   "parent": "hand_R",
+   "joint": "mcp3_R",
+   "nodes": [
+    "middleProx_R"
+   ]
+  },
+  "middleMid_R": {
+   "parent": "middleProx_R",
+   "joint": "pip3_R",
+   "nodes": [
+    "middleMid_R"
+   ]
+  },
+  "middleDist_R": {
+   "parent": "middleMid_R",
+   "joint": "dip3_R",
+   "nodes": [
+    "middleDist_R"
+   ]
+  },
+  "ringProx_R": {
+   "parent": "hand_R",
+   "joint": "mcp4_R",
+   "nodes": [
+    "ringProx_R"
+   ]
+  },
+  "ringMid_R": {
+   "parent": "ringProx_R",
+   "joint": "pip4_R",
+   "nodes": [
+    "ringMid_R"
+   ]
+  },
+  "ringDist_R": {
+   "parent": "ringMid_R",
+   "joint": "dip4_R",
+   "nodes": [
+    "ringDist_R"
+   ]
+  },
+  "littleProx_R": {
+   "parent": "hand_R",
+   "joint": "mcp5_R",
+   "nodes": [
+    "littleProx_R"
+   ]
+  },
+  "littleMid_R": {
+   "parent": "littleProx_R",
+   "joint": "pip5_R",
+   "nodes": [
+    "littleMid_R"
+   ]
+  },
+  "littleDist_R": {
+   "parent": "littleMid_R",
+   "joint": "dip5_R",
+   "nodes": [
+    "littleDist_R"
+   ]
+  }
+ },
+ "joints": {
+  "hip_L": {
+   "center": [
+    0.08008,
+    0.82011,
+    0.09299
+   ],
+   "radius": 0.023,
+   "axes": {
+    "flexion": [
+     -1.0,
+     -0.0,
+     -0.0
+    ],
+    "abduction": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "internalRotation": [
+     -0.0,
+     -1.0,
+     -0.0
+    ]
+   },
+   "method": "robust sphere fit to femoral head (r=23.0 mm, rms=0.63 mm); axes = pelvis frame (conventions hipQ)"
+  },
+  "knee_L": {
+   "center": [
+    0.07307,
+    0.42681,
+    0.0607
+   ],
+   "axes": {
+    "flexion": [
+     0.99716,
+     0.07479,
+     -0.00863
+    ],
+    "axialRotation": [
+     -0.00728,
+     -0.99925,
+     -0.03812
+    ]
+   },
+   "medialCondyleCenter": [
+    0.0492,
+    0.42502,
+    0.06091
+   ],
+   "lateralCondyleCenter": [
+    0.09694,
+    0.4286,
+    0.06049
+   ],
+   "method": "flexion axis through centres of spheres fitted to the posterior femoral condyles (r med 20.2 / lat 18.5 mm); centre = midpoint. axialRotation = tibial mechanical axis (plateau centre→ankle centre), + = internal rotation of tibia (screw-home = external = negative)"
+  },
+  "patellofemoral_L": {
+   "center": [
+    0.06576,
+    0.43404,
+    0.07198
+   ],
+   "grooveRadius": 0.0249,
+   "axes": {
+    "flexion": [
+     0.99716,
+     0.07479,
+     -0.00863
+    ]
+   },
+   "patellaRestCentroid": [
+    0.08218,
+    0.41731,
+    0.10597
+   ],
+   "patellaApex": [
+    0.08552,
+    0.3971,
+    0.10185
+   ],
+   "patellaBase": [
+    0.08685,
+    0.43676,
+    0.10613
+   ],
+   "tibialTuberosity": [
+    0.08468,
+    0.3719,
+    0.10285
+   ],
+   "patellarTendonLength": 0.0252,
+   "method": "centre = circle fit (in plane ⟂ knee axis) to the deepest points of the femoral trochlear groove; patella rotates about axes.flexion through this centre (≈0.7×knee flexion) keeping |patellaApex−tibialTuberosity| = patellarTendonLength"
+  },
+  "talocrural_L": {
+   "center": [
+    0.07364,
+    0.05255,
+    0.05859
+   ],
+   "axes": {
+    "dorsiflexion": [
+     -0.87919,
+     0.34318,
+     0.33054
+    ]
+   },
+   "medialMalleolusTip": [
+    0.05573,
+    0.05954,
+    0.06533
+   ],
+   "lateralMalleolusTip": [
+    0.1049,
+    0.04035,
+    0.04684
+   ],
+   "method": "axis through tips of medial (tibia) and lateral (fibula) malleoli (Inman); centre = point on that axis closest to the talar dome sphere centre (r=17.9 mm)"
+  },
+  "subtalar_L": {
+   "center": [
+    0.07701,
+    0.04193,
+    0.05448
+   ],
+   "axes": {
+    "inversion": [
+     0.23484,
+     -0.66913,
+     -0.70506
+    ]
+   },
+   "method": "Inman average axis: 42° above horizontal, 23° medial to foot long axis (heel→2nd metatarsal head); anchored at centroid of talus–calcaneus articular contact. + = inversion/supination"
+  },
+  "hip_R": {
+   "center": [
+    -0.08121,
+    0.82028,
+    0.09306
+   ],
+   "radius": 0.0229,
+   "axes": {
+    "flexion": [
+     -1.0,
+     -0.0,
+     -0.0
+    ],
+    "abduction": [
+     -0.0,
+     -0.0,
+     -1.0
+    ],
+    "internalRotation": [
+     0.0,
+     1.0,
+     0.0
+    ]
+   },
+   "method": "robust sphere fit to femoral head (r=22.9 mm, rms=0.69 mm); axes = pelvis frame (conventions hipQ)"
+  },
+  "knee_R": {
+   "center": [
+    -0.07427,
+    0.42676,
+    0.06098
+   ],
+   "axes": {
+    "flexion": [
+     0.99712,
+     -0.07537,
+     0.00892
+    ],
+    "axialRotation": [
+     -0.0071,
+     0.99938,
+     0.03454
+    ]
+   },
+   "medialCondyleCenter": [
+    -0.05019,
+    0.42494,
+    0.0612
+   ],
+   "lateralCondyleCenter": [
+    -0.09834,
+    0.42858,
+    0.06076
+   ],
+   "method": "flexion axis through centres of spheres fitted to the posterior femoral condyles (r med 20.4 / lat 18.7 mm); centre = midpoint. axialRotation = tibial mechanical axis (plateau centre→ankle centre), + = internal rotation of tibia (screw-home = external = negative)"
+  },
+  "patellofemoral_R": {
+   "center": [
+    -0.06683,
+    0.43439,
+    0.07172
+   ],
+   "grooveRadius": 0.025,
+   "axes": {
+    "flexion": [
+     0.99712,
+     -0.07537,
+     0.00892
+    ]
+   },
+   "patellaRestCentroid": [
+    -0.0835,
+    0.41732,
+    0.10597
+   ],
+   "patellaApex": [
+    -0.08703,
+    0.39705,
+    0.10264
+   ],
+   "patellaBase": [
+    -0.08817,
+    0.43679,
+    0.10575
+   ],
+   "tibialTuberosity": [
+    -0.08496,
+    0.37262,
+    0.10288
+   ],
+   "patellarTendonLength": 0.0245,
+   "method": "centre = circle fit (in plane ⟂ knee axis) to the deepest points of the femoral trochlear groove; patella rotates about axes.flexion through this centre (≈0.7×knee flexion) keeping |patellaApex−tibialTuberosity| = patellarTendonLength"
+  },
+  "talocrural_R": {
+   "center": [
+    -0.0753,
+    0.05259,
+    0.05977
+   ],
+   "axes": {
+    "dorsiflexion": [
+     -0.86567,
+     -0.34209,
+     -0.3655
+    ]
+   },
+   "medialMalleolusTip": [
+    -0.05784,
+    0.05949,
+    0.06714
+   ],
+   "lateralMalleolusTip": [
+    -0.10628,
+    0.04035,
+    0.04668
+   ],
+   "method": "axis through tips of medial (tibia) and lateral (fibula) malleoli (Inman); centre = point on that axis closest to the talar dome sphere centre (r=18.0 mm)"
+  },
+  "subtalar_R": {
+   "center": [
+    -0.07828,
+    0.04177,
+    0.05475
+   ],
+   "axes": {
+    "inversion": [
+     0.23262,
+     0.66913,
+     0.7058
+    ]
+   },
+   "method": "Inman average axis: 42° above horizontal, 23° medial to foot long axis (heel→2nd metatarsal head); anchored at centroid of talus–calcaneus articular contact. + = inversion/supination"
+  },
+  "lumbosacral": {
+   "center": [
+    0.0001,
+    0.91861,
+    0.08176
+   ],
+   "axes": {
+    "flexion": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "lateralBend": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "axialRotation": [
+     0.0,
+     1.0,
+     0.0
+    ]
+   },
+   "method": "centroid of the L5 intervertebral disc (below L5); axes = world (conventions spineQ)"
+  },
+  "L4L5": {
+   "center": [
+    -2e-05,
+    0.95213,
+    0.09287
+   ],
+   "axes": {
+    "flexion": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "lateralBend": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "axialRotation": [
+     0.0,
+     1.0,
+     0.0
+    ]
+   },
+   "method": "centroid of the L4 intervertebral disc (below L4); axes = world (conventions spineQ)"
+  },
+  "L3L4": {
+   "center": [
+    -0.00066,
+    0.98494,
+    0.0974
+   ],
+   "axes": {
+    "flexion": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "lateralBend": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "axialRotation": [
+     0.0,
+     1.0,
+     0.0
+    ]
+   },
+   "method": "centroid of the L3 intervertebral disc (below L3); axes = world (conventions spineQ)"
+  },
+  "L2L3": {
+   "center": [
+    0.00013,
+    1.01924,
+    0.09687
+   ],
+   "axes": {
+    "flexion": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "lateralBend": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "axialRotation": [
+     0.0,
+     1.0,
+     0.0
+    ]
+   },
+   "method": "centroid of the L2 intervertebral disc (below L2); axes = world (conventions spineQ)"
+  },
+  "L1L2": {
+   "center": [
+    -0.00077,
+    1.0515,
+    0.09269
+   ],
+   "axes": {
+    "flexion": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "lateralBend": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "axialRotation": [
+     0.0,
+     1.0,
+     0.0
+    ]
+   },
+   "method": "centroid of the L1 intervertebral disc (below L1); axes = world (conventions spineQ)"
+  },
+  "T12L1": {
+   "center": [
+    -0.00102,
+    1.08335,
+    0.08437
+   ],
+   "axes": {
+    "flexion": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "lateralBend": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "axialRotation": [
+     0.0,
+     1.0,
+     0.0
+    ]
+   },
+   "method": "centroid of the T12 intervertebral disc (below T12); axes = world (conventions spineQ)"
+  },
+  "C7T1": {
+   "center": [
+    -0.00149,
+    1.38184,
+    0.07838
+   ],
+   "axes": {
+    "flexion": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "lateralBend": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "axialRotation": [
+     0.0,
+     1.0,
+     0.0
+    ]
+   },
+   "method": "centroid of the C7 intervertebral disc (below C7); axes = world (conventions spineQ)"
+  },
+  "C6C7": {
+   "center": [
+    -0.00169,
+    1.39579,
+    0.0842
+   ],
+   "axes": {
+    "flexion": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "lateralBend": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "axialRotation": [
+     0.0,
+     1.0,
+     0.0
+    ]
+   },
+   "method": "centroid of the C6 intervertebral disc (below C6); axes = world (conventions spineQ)"
+  },
+  "C5C6": {
+   "center": [
+    -0.00192,
+    1.41016,
+    0.08813
+   ],
+   "axes": {
+    "flexion": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "lateralBend": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "axialRotation": [
+     0.0,
+     1.0,
+     0.0
+    ]
+   },
+   "method": "centroid of the C5 intervertebral disc (below C5); axes = world (conventions spineQ)"
+  },
+  "C4C5": {
+   "center": [
+    -0.00077,
+    1.42569,
+    0.09079
+   ],
+   "axes": {
+    "flexion": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "lateralBend": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "axialRotation": [
+     0.0,
+     1.0,
+     0.0
+    ]
+   },
+   "method": "centroid of the C4 intervertebral disc (below C4); axes = world (conventions spineQ)"
+  },
+  "C3C4": {
+   "center": [
+    -0.00074,
+    1.44112,
+    0.09046
+   ],
+   "axes": {
+    "flexion": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "lateralBend": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "axialRotation": [
+     0.0,
+     1.0,
+     0.0
+    ]
+   },
+   "method": "centroid of the C3 intervertebral disc (below C3); axes = world (conventions spineQ)"
+  },
+  "C2C3": {
+   "center": [
+    -0.00064,
+    1.45676,
+    0.08884
+   ],
+   "axes": {
+    "flexion": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "lateralBend": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "axialRotation": [
+     0.0,
+     1.0,
+     0.0
+    ]
+   },
+   "method": "centroid of the C2 intervertebral disc (below C2); axes = world (conventions spineQ)"
+  },
+  "C1C2": {
+   "center": [
+    -7e-05,
+    1.48363,
+    0.08981
+   ],
+   "axes": {
+    "flexion": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "lateralBend": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "axialRotation": [
+     0.0,
+     1.0,
+     0.0
+    ]
+   },
+   "method": "centroid of the upper 12 mm of the dens (axis); axialRotation about the dens"
+  },
+  "atlantooccipital": {
+   "center": [
+    -0.00753,
+    1.48887,
+    0.08068
+   ],
+   "axes": {
+    "flexion": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "lateralBend": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "axialRotation": [
+     0.0,
+     1.0,
+     0.0
+    ]
+   },
+   "method": "centroid of articular contact between atlas superior facets and occipital condyles"
+  },
+  "sternoclavicular_L": {
+   "center": [
+    0.01727,
+    1.33613,
+    0.13566
+   ],
+   "axes": {
+    "elevation": [
+     0.49799,
+     -0.0,
+     0.86718
+    ],
+    "protraction": [
+     0.15699,
+     -0.9876,
+     0.0
+    ],
+    "posteriorRotation": [
+     -0.85906,
+     -0.13656,
+     0.49333
+    ]
+   },
+   "method": "centroid of clavicle–manubrium articular contact; elevation/protraction axes ⟂ clavicle (SC→AC), posteriorRotation about clavicle long axis"
+  },
+  "humeroulnar_L": {
+   "center": [
+    0.21453,
+    1.05577,
+    0.06464
+   ],
+   "axes": {
+    "flexion": [
+     -0.96988,
+     -0.19534,
+     0.14551
+    ]
+   },
+   "axisMedialEnd": [
+    0.19369,
+    1.05157,
+    0.06777
+   ],
+   "axisLateralEnd": [
+    0.2364,
+    1.06017,
+    0.06136
+   ],
+   "method": "surface-of-revolution (Pottmann normal-line) fit of the trochlea+capitulum articular surface; centre = projection of articular-surface centroid onto the axis. Oblique axis → carrying angle"
+  },
+  "radioulnar_L": {
+   "center": [
+    0.23034,
+    1.03954,
+    0.06769
+   ],
+   "axes": {
+    "pronation": [
+     0.03601,
+     -0.97871,
+     0.20207
+    ]
+   },
+   "proximal": [
+    0.23034,
+    1.03954,
+    0.06769
+   ],
+   "distal": [
+    0.23813,
+    0.82795,
+    0.11137
+   ],
+   "method": "axis from radial head centre (circle fit of head circumference, r=10.7 mm) to ulnar head centre (sphere fit, r=8.6 mm); radius rotates about it, ulna fixed"
+  },
+  "glenohumeral_L": {
+   "center": [
+    0.16123,
+    1.32569,
+    0.07205
+   ],
+   "radius": 0.0214,
+   "axes": {
+    "flexion": [
+     -1.0,
+     -0.0,
+     -0.0
+    ],
+    "abduction": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "internalRotation": [
+     0.19366,
+     -0.9807,
+     -0.02694
+    ]
+   },
+   "glenoidCenter": [
+    0.14266,
+    1.32227,
+    0.06328
+   ],
+   "method": "robust sphere fit to humeral head (r=21.4 mm, rms=1.17 mm); flexion/abduction = thorax-frame axes, internalRotation about humeral long axis (GH→elbow)"
+  },
+  "acromioclavicular_L": {
+   "center": [
+    0.1458,
+    1.35656,
+    0.06185
+   ],
+   "axes": {
+    "upwardRotation": [
+     -0.61171,
+     -0.14888,
+     0.77695
+    ],
+    "internalRotation": [
+     -0.0,
+     -1.0,
+     -0.0
+    ],
+    "posteriorTilt": [
+     -0.70585,
+     -0.34076,
+     -0.62102
+    ]
+   },
+   "scapularPlaneNormal": [
+    -0.61171,
+    -0.14888,
+    0.77695
+   ],
+   "method": "centroid of clavicle–acromion articular contact; upwardRotation ⟂ scapular plane (PCA normal), internalRotation ≈ vertical, posteriorTilt about scapular spine direction"
+  },
+  "radiocarpal_L": {
+   "center": [
+    0.25883,
+    0.81111,
+    0.11933
+   ],
+   "axes": {
+    "flexion": [
+     -0.99219,
+     -0.0838,
+     0.09243
+    ],
+    "ulnarDeviation": [
+     0.13671,
+     -0.18545,
+     -0.9731
+    ]
+   },
+   "method": "sphere fit to proximal articular surface of scaphoid+lunate (r=12.4 mm); flexion axis = forearm axis × palmar normal, ulnarDeviation = forearm axis × ulnar direction (palmar normal from metacarpal 2–5 plane, oriented toward pisiform)"
+  },
+  "midcarpal_L": {
+   "center": [
+    0.25542,
+    0.80745,
+    0.11653
+   ],
+   "axes": {
+    "flexion": [
+     -0.99219,
+     -0.0838,
+     0.09243
+    ],
+    "ulnarDeviation": [
+     0.13671,
+     -0.18545,
+     -0.9731
+    ]
+   },
+   "method": "sphere fit to capitate head (r=7.2 mm); flexion axis = forearm axis × palmar normal, ulnarDeviation = forearm axis × ulnar direction (palmar normal from metacarpal 2–5 plane, oriented toward pisiform)"
+  },
+  "mcp2_L": {
+   "center": [
+    0.28442,
+    0.73551,
+    0.13331
+   ],
+   "axes": {
+    "flexion": [
+     -0.93896,
+     -0.31526,
+     0.13771
+    ],
+    "abduction": [
+     -0.14651,
+     0.28624,
+     0.94689
+    ]
+   },
+   "method": "sphere fit to articular head of proximal bone (r=6.5 mm, rms=0.67 mm); flexion axis = bone axis × palmar normal"
+  },
+  "pip2_L": {
+   "center": [
+    0.29695,
+    0.7012,
+    0.15005
+   ],
+   "axes": {
+    "flexion": [
+     -0.93726,
+     -0.31991,
+     0.13858
+    ]
+   },
+   "method": "sphere fit to articular head of proximal bone (r=5.3 mm, rms=0.45 mm); flexion axis = bone axis × palmar normal"
+  },
+  "dip2_L": {
+   "center": [
+    0.30391,
+    0.68541,
+    0.16596
+   ],
+   "axes": {
+    "flexion": [
+     -0.97023,
+     -0.21151,
+     0.11797
+    ]
+   },
+   "method": "sphere fit to articular head of proximal bone (r=4.4 mm, rms=0.41 mm); flexion axis = bone axis × palmar normal"
+  },
+  "mcp3_L": {
+   "center": [
+    0.26485,
+    0.73756,
+    0.13351
+   ],
+   "axes": {
+    "flexion": [
+     -0.98885,
+     -0.11194,
+     0.09818
+    ],
+    "abduction": [
+     -0.15698,
+     0.41453,
+     0.89639
+    ]
+   },
+   "method": "sphere fit to articular head of proximal bone (r=6.8 mm, rms=0.64 mm); flexion axis = bone axis × palmar normal"
+  },
+  "pip3_L": {
+   "center": [
+    0.2712,
+    0.69947,
+    0.15664
+   ],
+   "axes": {
+    "flexion": [
+     -0.99212,
+     -0.08444,
+     0.09257
+    ]
+   },
+   "method": "sphere fit to articular head of proximal bone (r=5.6 mm, rms=0.45 mm); flexion axis = bone axis × palmar normal"
+  },
+  "dip3_L": {
+   "center": [
+    0.27474,
+    0.67683,
+    0.1745
+   ],
+   "axes": {
+    "flexion": [
+     -0.99204,
+     -0.08516,
+     0.09271
+    ]
+   },
+   "method": "sphere fit to articular head of proximal bone (r=4.7 mm, rms=0.42 mm); flexion axis = bone axis × palmar normal"
+  },
+  "mcp4_L": {
+   "center": [
+    0.24607,
+    0.74115,
+    0.13274
+   ],
+   "axes": {
+    "flexion": [
+     -0.99722,
+     0.00207,
+     0.07453
+    ],
+    "abduction": [
+     0.15957,
+     -0.45186,
+     -0.8777
+    ]
+   },
+   "method": "sphere fit to articular head of proximal bone (r=6.4 mm, rms=0.56 mm); flexion axis = bone axis × palmar normal"
+  },
+  "pip4_L": {
+   "center": [
+    0.24784,
+    0.70463,
+    0.15451
+   ],
+   "axes": {
+    "flexion": [
+     -0.9973,
+     0.01784,
+     0.07118
+    ]
+   },
+   "method": "sphere fit to articular head of proximal bone (r=5.1 mm, rms=0.42 mm); flexion axis = bone axis × palmar normal"
+  },
+  "dip4_L": {
+   "center": [
+    0.24913,
+    0.68401,
+    0.17429
+   ],
+   "axes": {
+    "flexion": [
+     -0.99248,
+     0.11135,
+     0.05091
+    ]
+   },
+   "method": "sphere fit to articular head of proximal bone (r=4.6 mm, rms=0.35 mm); flexion axis = bone axis × palmar normal"
+  },
+  "mcp5_L": {
+   "center": [
+    0.23023,
+    0.74814,
+    0.13545
+   ],
+   "axes": {
+    "flexion": [
+     -0.9866,
+     0.15808,
+     0.04051
+    ],
+    "abduction": [
+     0.15962,
+     -0.45264,
+     -0.87729
+    ]
+   },
+   "method": "sphere fit to articular head of proximal bone (r=6.1 mm, rms=0.53 mm); flexion axis = bone axis × palmar normal"
+  },
+  "pip5_L": {
+   "center": [
+    0.22583,
+    0.71771,
+    0.15253
+   ],
+   "axes": {
+    "flexion": [
+     -0.97194,
+     0.23409,
+     0.02323
+    ]
+   },
+   "method": "sphere fit to articular head of proximal bone (r=4.3 mm, rms=0.40 mm); flexion axis = bone axis × palmar normal"
+  },
+  "dip5_L": {
+   "center": [
+    0.22232,
+    0.70122,
+    0.16583
+   ],
+   "axes": {
+    "flexion": [
+     -0.99141,
+     0.12139,
+     0.04869
+    ]
+   },
+   "method": "sphere fit to articular head of proximal bone (r=4.0 mm, rms=0.31 mm); flexion axis = bone axis × palmar normal"
+  },
+  "cmc1_L": {
+   "center": [
+    0.27747,
+    0.80329,
+    0.12403
+   ],
+   "axes": {
+    "flexion": [
+     0.15954,
+     -0.4514,
+     -0.87794
+    ],
+    "abduction": [
+     -0.73985,
+     -0.64453,
+     0.19285
+    ]
+   },
+   "method": "centroid of trapezium–1st metacarpal saddle contact; flexion moves thumb ulnarward, abduction palmarward (approximate)"
+  },
+  "mcp1_L": {
+   "center": [
+    0.30184,
+    0.77792,
+    0.14197
+   ],
+   "axes": {
+    "flexion": [
+     -0.60498,
+     -0.53475,
+     -0.58995
+    ]
+   },
+   "method": "sphere fit to articular head of proximal bone (r=7.4 mm, rms=0.61 mm); flexion toward palm/ulnar side (approximate thumb plane)"
+  },
+  "ip1_L": {
+   "center": [
+    0.31208,
+    0.7514,
+    0.15617
+   ],
+   "axes": {
+    "flexion": [
+     -0.56861,
+     -0.61748,
+     -0.54351
+    ]
+   },
+   "method": "sphere fit to articular head of proximal bone (r=5.8 mm, rms=0.28 mm); flexion toward palm/ulnar side (approximate thumb plane)"
+  },
+  "sternoclavicular_R": {
+   "center": [
+    -0.01836,
+    1.33602,
+    0.13554
+   ],
+   "axes": {
+    "elevation": [
+     0.49067,
+     0.0,
+     -0.87134
+    ],
+    "protraction": [
+     0.15836,
+     0.98738,
+     -0.0
+    ],
+    "posteriorRotation": [
+     -0.86296,
+     0.1384,
+     -0.48595
+    ]
+   },
+   "method": "centroid of clavicle–manubrium articular contact; elevation/protraction axes ⟂ clavicle (SC→AC), posteriorRotation about clavicle long axis"
+  },
+  "humeroulnar_R": {
+   "center": [
+    -0.21606,
+    1.05572,
+    0.06468
+   ],
+   "axes": {
+    "flexion": [
+     -0.96996,
+     0.19495,
+     -0.14547
+    ]
+   },
+   "axisMedialEnd": [
+    -0.23769,
+    1.06007,
+    0.06143
+   ],
+   "axisLateralEnd": [
+    -0.19445,
+    1.05138,
+    0.06792
+   ],
+   "method": "surface-of-revolution (Pottmann normal-line) fit of the trochlea+capitulum articular surface; centre = projection of articular-surface centroid onto the axis. Oblique axis → carrying angle"
+  },
+  "radioulnar_R": {
+   "center": [
+    -0.23162,
+    1.0395,
+    0.06769
+   ],
+   "axes": {
+    "pronation": [
+     0.03579,
+     0.97875,
+     -0.20191
+    ]
+   },
+   "proximal": [
+    -0.23162,
+    1.0395,
+    0.06769
+   ],
+   "distal": [
+    -0.23936,
+    0.82778,
+    0.11136
+   ],
+   "method": "axis from radial head centre (circle fit of head circumference, r=10.7 mm) to ulnar head centre (sphere fit, r=8.5 mm); radius rotates about it, ulna fixed"
+  },
+  "glenohumeral_R": {
+   "center": [
+    -0.1621,
+    1.32596,
+    0.0718
+   ],
+   "radius": 0.0211,
+   "axes": {
+    "flexion": [
+     -1.0,
+     -0.0,
+     -0.0
+    ],
+    "abduction": [
+     -0.0,
+     -0.0,
+     -1.0
+    ],
+    "internalRotation": [
+     0.19575,
+     0.98031,
+     0.02583
+    ]
+   },
+   "glenoidCenter": [
+    -0.14454,
+    1.32273,
+    0.06219
+   ],
+   "method": "robust sphere fit to humeral head (r=21.1 mm, rms=1.12 mm); flexion/abduction = thorax-frame axes, internalRotation about humeral long axis (GH→elbow)"
+  },
+  "acromioclavicular_R": {
+   "center": [
+    -0.14731,
+    1.3567,
+    0.06292
+   ],
+   "axes": {
+    "upwardRotation": [
+     -0.62269,
+     0.13836,
+     -0.77014
+    ],
+    "internalRotation": [
+     0.0,
+     1.0,
+     0.0
+    ],
+    "posteriorTilt": [
+     -0.69948,
+     0.34269,
+     0.62713
+    ]
+   },
+   "scapularPlaneNormal": [
+    0.62269,
+    -0.13836,
+    0.77014
+   ],
+   "method": "centroid of clavicle–acromion articular contact; upwardRotation ⟂ scapular plane (PCA normal), internalRotation ≈ vertical, posteriorTilt about scapular spine direction"
+  },
+  "radiocarpal_R": {
+   "center": [
+    -0.25962,
+    0.81073,
+    0.11886
+   ],
+   "axes": {
+    "flexion": [
+     -0.99227,
+     0.08243,
+     -0.09281
+    ],
+    "ulnarDeviation": [
+     0.14431,
+     0.18437,
+     0.9722
+    ]
+   },
+   "method": "sphere fit to proximal articular surface of scaphoid+lunate (r=12.6 mm); flexion axis = forearm axis × palmar normal, ulnarDeviation = forearm axis × ulnar direction (palmar normal from metacarpal 2–5 plane, oriented toward pisiform)"
+  },
+  "midcarpal_R": {
+   "center": [
+    -0.25655,
+    0.80731,
+    0.11663
+   ],
+   "axes": {
+    "flexion": [
+     -0.99227,
+     0.08243,
+     -0.09281
+    ],
+    "ulnarDeviation": [
+     0.14431,
+     0.18437,
+     0.9722
+    ]
+   },
+   "method": "sphere fit to capitate head (r=7.3 mm); flexion axis = forearm axis × palmar normal, ulnarDeviation = forearm axis × ulnar direction (palmar normal from metacarpal 2–5 plane, oriented toward pisiform)"
+  },
+  "mcp2_R": {
+   "center": [
+    -0.28555,
+    0.73554,
+    0.13322
+   ],
+   "axes": {
+    "flexion": [
+     -0.93652,
+     0.32168,
+     -0.13944
+    ],
+    "abduction": [
+     -0.15398,
+     -0.28572,
+     -0.94586
+    ]
+   },
+   "method": "sphere fit to articular head of proximal bone (r=6.5 mm, rms=0.59 mm); flexion axis = bone axis × palmar normal"
+  },
+  "pip2_R": {
+   "center": [
+    -0.29829,
+    0.70103,
+    0.15002
+   ],
+   "axes": {
+    "flexion": [
+     -0.93683,
+     0.32086,
+     -0.13929
+    ]
+   },
+   "method": "sphere fit to articular head of proximal bone (r=5.2 mm, rms=0.44 mm); flexion axis = bone axis × palmar normal"
+  },
+  "dip2_R": {
+   "center": [
+    -0.30528,
+    0.68522,
+    0.16602
+   ],
+   "axes": {
+    "flexion": [
+     -0.97082,
+     0.20875,
+     -0.11803
+    ]
+   },
+   "method": "sphere fit to articular head of proximal bone (r=4.3 mm, rms=0.40 mm); flexion axis = bone axis × palmar normal"
+  },
+  "mcp3_R": {
+   "center": [
+    -0.26615,
+    0.73749,
+    0.13349
+   ],
+   "axes": {
+    "flexion": [
+     -0.98872,
+     0.11249,
+     -0.09893
+    ],
+    "abduction": [
+     -0.16415,
+     -0.41487,
+     -0.89495
+    ]
+   },
+   "method": "sphere fit to articular head of proximal bone (r=6.8 mm, rms=0.62 mm); flexion axis = bone axis × palmar normal"
+  },
+  "pip3_R": {
+   "center": [
+    -0.27251,
+    0.69957,
+    0.15656
+   ],
+   "axes": {
+    "flexion": [
+     -0.99219,
+     0.08315,
+     -0.09295
+    ]
+   },
+   "method": "sphere fit to articular head of proximal bone (r=5.6 mm, rms=0.49 mm); flexion axis = bone axis × palmar normal"
+  },
+  "dip3_R": {
+   "center": [
+    -0.27602,
+    0.67694,
+    0.17476
+   ],
+   "axes": {
+    "flexion": [
+     -0.99145,
+     0.09008,
+     -0.09437
+    ]
+   },
+   "method": "sphere fit to articular head of proximal bone (r=4.8 mm, rms=0.43 mm); flexion axis = bone axis × palmar normal"
+  },
+  "mcp4_R": {
+   "center": [
+    -0.24737,
+    0.74094,
+    0.13279
+   ],
+   "axes": {
+    "flexion": [
+     -0.99716,
+     -0.00136,
+     -0.07536
+    ],
+    "abduction": [
+     0.16664,
+     0.45305,
+     0.87577
+    ]
+   },
+   "method": "sphere fit to articular head of proximal bone (r=6.3 mm, rms=0.59 mm); flexion axis = bone axis × palmar normal"
+  },
+  "pip4_R": {
+   "center": [
+    -0.24912,
+    0.7046,
+    0.1546
+   ],
+   "axes": {
+    "flexion": [
+     -0.99726,
+     -0.01573,
+     -0.07232
+    ]
+   },
+   "method": "sphere fit to articular head of proximal bone (r=5.0 mm, rms=0.46 mm); flexion axis = bone axis × palmar normal"
+  },
+  "dip4_R": {
+   "center": [
+    -0.25045,
+    0.68386,
+    0.17422
+   ],
+   "axes": {
+    "flexion": [
+     -0.99191,
+     -0.11649,
+     -0.05049
+    ]
+   },
+   "method": "sphere fit to articular head of proximal bone (r=4.6 mm, rms=0.36 mm); flexion axis = bone axis × palmar normal"
+  },
+  "mcp5_R": {
+   "center": [
+    -0.23146,
+    0.74789,
+    0.13563
+   ],
+   "axes": {
+    "flexion": [
+     -0.98697,
+     -0.15539,
+     -0.04185
+    ],
+    "abduction": [
+     0.16647,
+     0.45028,
+     0.87723
+    ]
+   },
+   "method": "sphere fit to articular head of proximal bone (r=5.9 mm, rms=0.55 mm); flexion axis = bone axis × palmar normal"
+  },
+  "pip5_R": {
+   "center": [
+    -0.2271,
+    0.7177,
+    0.15239
+   ],
+   "axes": {
+    "flexion": [
+     -0.9725,
+     -0.2316,
+     -0.02455
+    ]
+   },
+   "method": "sphere fit to articular head of proximal bone (r=4.4 mm, rms=0.42 mm); flexion axis = bone axis × palmar normal"
+  },
+  "dip5_R": {
+   "center": [
+    -0.22357,
+    0.70101,
+    0.16592
+   ],
+   "axes": {
+    "flexion": [
+     -0.99211,
+     -0.11455,
+     -0.05092
+    ]
+   },
+   "method": "sphere fit to articular head of proximal bone (r=3.9 mm, rms=0.33 mm); flexion axis = bone axis × palmar normal"
+  },
+  "cmc1_R": {
+   "center": [
+    -0.27885,
+    0.80322,
+    0.12362
+   ],
+   "axes": {
+    "flexion": [
+     0.16744,
+     0.4663,
+     0.86864
+    ],
+    "abduction": [
+     -0.74299,
+     0.64098,
+     -0.19263
+    ]
+   },
+   "method": "centroid of trapezium–1st metacarpal saddle contact; flexion moves thumb ulnarward, abduction palmarward (approximate)"
+  },
+  "mcp1_R": {
+   "center": [
+    -0.30309,
+    0.77817,
+    0.14192
+   ],
+   "axes": {
+    "flexion": [
+     -0.60411,
+     0.53143,
+     0.59383
+    ]
+   },
+   "method": "sphere fit to articular head of proximal bone (r=7.5 mm, rms=0.64 mm); flexion toward palm/ulnar side (approximate thumb plane)"
+  },
+  "ip1_R": {
+   "center": [
+    -0.31331,
+    0.7514,
+    0.15616
+   ],
+   "axes": {
+    "flexion": [
+     -0.56461,
+     0.62153,
+     0.54306
+    ]
+   },
+   "method": "sphere fit to articular head of proximal bone (r=5.8 mm, rms=0.29 mm); flexion toward palm/ulnar side (approximate thumb plane)"
+  }
+ },
+ "landmarks": {
+  "medialEpicondyleFemur_L": [
+   0.03207,
+   0.4376,
+   0.06386
+  ],
+  "lateralEpicondyleFemur_L": [
+   0.11371,
+   0.43171,
+   0.06727
+  ],
+  "patellaApex_L": [
+   0.08552,
+   0.3971,
+   0.10185
+  ],
+  "patellaBase_L": [
+   0.08685,
+   0.43676,
+   0.10613
+  ],
+  "tibialTuberosity_L": [
+   0.08468,
+   0.3719,
+   0.10285
+  ],
+  "medialMalleolus_L": [
+   0.0474,
+   0.0703,
+   0.05999
+  ],
+  "lateralMalleolus_L": [
+   0.11096,
+   0.04916,
+   0.04619
+  ],
+  "heel_L": [
+   0.08034,
+   0.02097,
+   0.00917
+  ],
+  "toeTip_L": [
+   0.10366,
+   -0.00075,
+   0.23083
+  ],
+  "metatarsal5Base_L": [
+   0.11282,
+   0.01317,
+   0.0843
+  ],
+  "greaterTrochanter_L": [
+   0.14336,
+   0.79266,
+   0.08636
+  ],
+  "hipCenter_L": [
+   0.08008,
+   0.82011,
+   0.09299
+  ],
+  "kneeCenter_L": [
+   0.07307,
+   0.42681,
+   0.0607
+  ],
+  "ankleCenter_L": [
+   0.07364,
+   0.05255,
+   0.05859
+  ],
+  "medialEpicondyleFemur_R": [
+   -0.0334,
+   0.43693,
+   0.06368
+  ],
+  "lateralEpicondyleFemur_R": [
+   -0.11507,
+   0.43221,
+   0.06636
+  ],
+  "patellaApex_R": [
+   -0.08703,
+   0.39705,
+   0.10264
+  ],
+  "patellaBase_R": [
+   -0.08817,
+   0.43679,
+   0.10575
+  ],
+  "tibialTuberosity_R": [
+   -0.08496,
+   0.37262,
+   0.10288
+  ],
+  "medialMalleolus_R": [
+   -0.0487,
+   0.06986,
+   0.0605
+  ],
+  "lateralMalleolus_R": [
+   -0.11238,
+   0.05237,
+   0.0489
+  ],
+  "heel_R": [
+   -0.0811,
+   0.02342,
+   0.00919
+  ],
+  "toeTip_R": [
+   -0.10481,
+   -0.00091,
+   0.23085
+  ],
+  "metatarsal5Base_R": [
+   -0.1141,
+   0.01347,
+   0.08428
+  ],
+  "greaterTrochanter_R": [
+   -0.14472,
+   0.7931,
+   0.08488
+  ],
+  "hipCenter_R": [
+   -0.08121,
+   0.82028,
+   0.09306
+  ],
+  "kneeCenter_R": [
+   -0.07427,
+   0.42676,
+   0.06098
+  ],
+  "ankleCenter_R": [
+   -0.0753,
+   0.05259,
+   0.05977
+  ],
+  "ASIS_L": [
+   0.11757,
+   0.90378,
+   0.15223
+  ],
+  "iliacCrestTop_L": [
+   0.096,
+   0.96727,
+   0.07237
+  ],
+  "ischialTuberosity_L": [
+   0.04331,
+   0.75942,
+   0.06455
+  ],
+  "ASIS_R": [
+   -0.11602,
+   0.90122,
+   0.15228
+  ],
+  "iliacCrestTop_R": [
+   -0.09572,
+   0.96678,
+   0.07278
+  ],
+  "ischialTuberosity_R": [
+   -0.04248,
+   0.75892,
+   0.06462
+  ],
+  "pubicSymphysis": [
+   0.00034,
+   0.80398,
+   0.12975
+  ],
+  "pubicSymphysisSuperior": [
+   0.00034,
+   0.81295,
+   0.12975
+  ],
+  "pelvisCenter": [
+   -0.00057,
+   0.8202,
+   0.09302
+  ],
+  "sacralPromontory": [
+   -0.00178,
+   0.90616,
+   0.09147
+  ],
+  "coccyxApproxTip": [
+   -0.00211,
+   0.79069,
+   0.02726
+  ],
+  "C7spinous": [
+   0.00078,
+   1.38354,
+   0.02286
+  ],
+  "T1spinous": [
+   -0.00252,
+   1.36919,
+   0.01692
+  ],
+  "L4spinous": [
+   -0.00047,
+   0.95917,
+   0.0337
+  ],
+  "L1body": [
+   -0.00115,
+   1.06243,
+   0.07878
+  ],
+  "L2body": [
+   -0.00138,
+   1.03263,
+   0.08345
+  ],
+  "L3body": [
+   -0.00193,
+   1.0032,
+   0.0855
+  ],
+  "L4body": [
+   -0.00029,
+   0.97082,
+   0.08543
+  ],
+  "L5body": [
+   -0.00262,
+   0.94091,
+   0.07947
+  ],
+  "jugularNotch": [
+   0.00275,
+   1.34249,
+   0.14215
+  ],
+  "sternalAngle": [
+   0.00215,
+   1.29958,
+   0.18005
+  ],
+  "xiphoid": [
+   -0.00048,
+   1.16899,
+   0.19706
+  ],
+  "vertex": [
+   -0.00172,
+   1.63822,
+   0.08757
+  ],
+  "EOM": [
+   -0.00737,
+   1.55845,
+   -0.00223
+  ],
+  "nasion": [
+   -0.00052,
+   1.53933,
+   0.18018
+  ],
+  "noseTip": [
+   -0.00074,
+   1.49564,
+   0.21008
+  ],
+  "menton": [
+   0.00419,
+   1.43565,
+   0.17162
+  ],
+  "gonion_L": [
+   0.03758,
+   1.46142,
+   0.11326
+  ],
+  "gonion_R": [
+   -0.03888,
+   1.46186,
+   0.11282
+  ],
+  "acromion_L": [
+   0.16737,
+   1.35432,
+   0.05473
+  ],
+  "inferiorAngleScapula_L": [
+   0.09007,
+   1.20151,
+   0.00015
+  ],
+  "superiorAngleScapula_L": [
+   0.07297,
+   1.34878,
+   0.01815
+  ],
+  "coracoid_L": [
+   0.13083,
+   1.33396,
+   0.09908
+  ],
+  "glenoidCenter_L": [
+   0.14266,
+   1.32227,
+   0.06328
+  ],
+  "rootOfSpineScapula_L": [
+   0.08671,
+   1.3173,
+   0.00102
+  ],
+  "medialEpicondyleHumerus_L": [
+   0.17699,
+   1.05877,
+   0.06408
+  ],
+  "lateralEpicondyleHumerus_L": [
+   0.24026,
+   1.0644,
+   0.0575
+  ],
+  "olecranon_L": [
+   0.20776,
+   1.04718,
+   0.0405
+  ],
+  "radialStyloid_L": [
+   0.27607,
+   0.81608,
+   0.11461
+  ],
+  "ulnarStyloid_L": [
+   0.23559,
+   0.81526,
+   0.10908
+  ],
+  "radialHead_L": [
+   0.24131,
+   1.04016,
+   0.0678
+  ],
+  "wristCenter_L": [
+   0.25883,
+   0.81111,
+   0.11933
+  ],
+  "elbowCenter_L": [
+   0.21453,
+   1.05577,
+   0.06464
+  ],
+  "shoulderCenter_L": [
+   0.16123,
+   1.32569,
+   0.07205
+  ],
+  "indexTip_L": [
+   0.30843,
+   0.67304,
+   0.18257
+  ],
+  "middleTip_L": [
+   0.2779,
+   0.66402,
+   0.19064
+  ],
+  "ringTip_L": [
+   0.25008,
+   0.67515,
+   0.18987
+  ],
+  "littleTip_L": [
+   0.22018,
+   0.68728,
+   0.17751
+  ],
+  "thumbTip_L": [
+   0.32282,
+   0.73021,
+   0.16737
+  ],
+  "acromion_R": [
+   -0.16868,
+   1.35435,
+   0.0546
+  ],
+  "inferiorAngleScapula_R": [
+   -0.09116,
+   1.2015,
+   -2e-05
+  ],
+  "superiorAngleScapula_R": [
+   -0.07425,
+   1.34875,
+   0.01841
+  ],
+  "coracoid_R": [
+   -0.13186,
+   1.33397,
+   0.09908
+  ],
+  "glenoidCenter_R": [
+   -0.14454,
+   1.32273,
+   0.06219
+  ],
+  "rootOfSpineScapula_R": [
+   -0.08877,
+   1.31747,
+   0.00105
+  ],
+  "medialEpicondyleHumerus_R": [
+   -0.17828,
+   1.05888,
+   0.06422
+  ],
+  "lateralEpicondyleHumerus_R": [
+   -0.24158,
+   1.06436,
+   0.0573
+  ],
+  "olecranon_R": [
+   -0.20884,
+   1.04664,
+   0.04045
+  ],
+  "radialStyloid_R": [
+   -0.27811,
+   0.8162,
+   0.11503
+  ],
+  "ulnarStyloid_R": [
+   -0.23682,
+   0.81525,
+   0.10908
+  ],
+  "radialHead_R": [
+   -0.24265,
+   1.03989,
+   0.06825
+  ],
+  "wristCenter_R": [
+   -0.25962,
+   0.81073,
+   0.11886
+  ],
+  "elbowCenter_R": [
+   -0.21606,
+   1.05572,
+   0.06468
+  ],
+  "shoulderCenter_R": [
+   -0.1621,
+   1.32596,
+   0.0718
+  ],
+  "indexTip_R": [
+   -0.30989,
+   0.67312,
+   0.18271
+  ],
+  "middleTip_R": [
+   -0.27904,
+   0.66336,
+   0.1901
+  ],
+  "ringTip_R": [
+   -0.25205,
+   0.67557,
+   0.19014
+  ],
+  "littleTip_R": [
+   -0.22139,
+   0.68742,
+   0.17808
+  ],
+  "thumbTip_R": [
+   -0.32405,
+   0.73016,
+   0.16749
+  ]
+ },
+ "dims": {
+  "hipHalfWidth": 0.0806,
+  "thoraxHeight": 0.5056,
+  "shoulderHalfWidth": 0.1617,
+  "head": 0.2592,
+  "neck": 0.0532,
+  "upperArm": 0.2754,
+  "forearm": 0.2546,
+  "hand": 0.1647,
+  "thigh": 0.3948,
+  "shank": 0.3742,
+  "footLength": 0.2217,
+  "ankleHeight": 0.0567
+ },
+ "dimsDefinitions": {
+  "hipHalfWidth": "½·|x(hip_L) − x(hip_R)| (femoral head centres)",
+  "thoraxHeight": "y(mid glenohumeral centres) − y(pelvisCenter)",
+  "shoulderHalfWidth": "½·|x(GH_L) − x(GH_R)|",
+  "head": "(y(vertex) − y(noseTip)) / 0.55  (so stickFK nose ≈ nose tip)",
+  "neck": "y(vertex) − y(shoulder line) − head",
+  "upperArm": "|GH − humeroulnar centre|",
+  "forearm": "|humeroulnar − radiocarpal centre|",
+  "hand": "|radiocarpal centre − middle fingertip|",
+  "thigh": "|hip − knee centre|",
+  "shank": "|knee − talocrural centre|",
+  "footLength": "z(toe tip) − z(heel)",
+  "ankleHeight": "y(talocrural centre) − y(sole)"
+ },
+ "restPose": {
+  "L": {
+   "shoulder": {
+    "elevation": 11.3,
+    "plane": -7.9
+   },
+   "elbow": {
+    "flexion": 13.7
+   },
+   "forearm": {
+    "pronation": -83.7
+   },
+   "wrist": {
+    "flexion": -3.0,
+    "ulnarDeviation": 5.4
+   },
+   "hip": {
+    "flexion": -4.7,
+    "abduction": -1.0
+   },
+   "knee": {
+    "flexion": -4.4
+   },
+   "ankle": {
+    "dorsiflexion": -4.1
+   }
+  },
+  "R": {
+   "shoulder": {
+    "elevation": 11.4,
+    "plane": -7.5
+   },
+   "elbow": {
+    "flexion": 13.5
+   },
+   "forearm": {
+    "pronation": -83.7
+   },
+   "wrist": {
+    "flexion": -2.1,
+    "ulnarDeviation": 4.9
+   },
+   "hip": {
+    "flexion": -4.7,
+    "abduction": -1.0
+   },
+   "knee": {
+    "flexion": -4.5
+   },
+   "ankle": {
+    "dorsiflexion": -5.3
+   }
+  },
+  "note": "Measured joint angles of the UNMODIFIED BodyParts3D mesh in conventions.js terms (the mesh is close to, but not exactly, the anatomical position). To show Pose p, rotate each child about its rig axis by (p − restPose); ankle dorsiflexion uses heel→2nd-metatarsal-head as foot axis."
+ },
+ "pelvisCenter": [
+  -0.00057,
+  0.8202,
+  0.09302
+ ],
+ "stats": {
+  "glbBytes": 4790660,
+  "triangles": 232123,
+  "skinTriangles": 24135
+ }
+}

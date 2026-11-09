@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BoneSim — tracking debug</title>
+<link rel="icon" href="data:,">
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }
+</script>
+<style>
+  :root { color-scheme: dark; --bg:#101418; --panel:#182028; --fg:#dde6ee; --mut:#8a9aa8; --acc:#4fd1ff; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:13px/1.4 system-ui, sans-serif; }
+  header { display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; padding:8px 12px; background:var(--panel); position:sticky; top:0; z-index:5; }
+  header label { display:flex; gap:4px; align-items:center; }
+  select, button { background:#22303c; color:var(--fg); border:1px solid #33465a; border-radius:4px; padding:3px 8px; font:inherit; }
+  button.primary { background:#1d5a75; border-color:#2d84aa; }
+  #status { color:var(--mut); flex:1 1 300px; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #fps { font-variant-numeric:tabular-nums; color:var(--acc); }
+  main { display:grid; grid-template-columns: minmax(0, 1fr) 420px; gap:10px; padding:10px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  #stage { position:relative; width:100%; background:#000; border-radius:6px; overflow:hidden; }
+  #stage.mirror { transform: scaleX(-1); }
+  #stage video, #stage canvas { position:absolute; inset:0; width:100%; height:100%; }
+  #fig { width:100%; height:380px; background:#0b0f13; border-radius:6px; }
+  table { width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; margin-top:8px; }
+  td { padding:1px 4px; border-bottom:1px solid #1f2a34; }
+  td.v { text-align:right; width:64px; }
+  td.c { width:90px; }
+  .bar { height:6px; background:#2a3a48; border-radius:3px; overflow:hidden; }
+  .bar > i { display:block; height:100%; background:var(--acc); }
+  tr.low td { color:#7b8790; }
+  .legend { color:var(--mut); font-size:12px; margin:6px 0; }
+  .legend b { font-weight:normal; padding:0 4px; border-radius:3px; }
+  #calibInfo { color:var(--mut); font-size:12px; white-space:pre-wrap; }
+  .note { color:#c9a86a; font-size:12px; }
+</style>
+</head>
+<body>
+<header>
+  <label>Source <select id="source"><option value="camera">camera</option><option value="synthetic">synthetic (no camera)</option></select></label>
+  <label>Camera <select id="facing"><option value="user">front (user)</option><option value="environment">back (environment)</option></select></label>
+  <label><select id="device"><option value="">(default device)</option></select></label>
+  <label>Model <select id="variant"><option>lite</option><option selected>full</option><option>heavy</option></select></label>
+  <label><select id="delegate"><option>GPU</option><option>CPU</option></select></label>
+  <label><input type="checkbox" id="hands" checked> hands</label>
+  <label><input type="checkbox" id="mirror" checked> mirror display</label>
+  <label title="tick only if your camera delivers already-mirrored frames"><input type="checkbox" id="inputMirrored"> input is mirrored</label>
+  <label>Overlay <select id="proj"><option value="ortho">ortho fit</option><option value="persp">perspective fit</option></select></label>
+  <button id="start" class="primary">Start</button>
+  <button id="calib">Calibrate (3 s)</button>
+  <button id="clearCalib">Clear calib</button>
+  <span id="fps">– fps</span>
+  <span id="status">idle</span>
+</header>
+<main>
+  <section>
+    <div id="stage" style="aspect-ratio: 4 / 3"><video id="video" playsinline muted></video><canvas id="ov"></canvas></div>
+    <div class="legend">
+      <b style="background:#e7c35a33">yellow</b> raw MediaPipe 2D landmarks (dim = low visibility) ·
+      <b style="background:#4fd1ff33">cyan</b> stickFK(pose, dims) projected with <code>result.alignment</code> ·
+      <b style="background:#ff8a3d33">orange</b> thumb side · <b style="background:#d06bff33">magenta</b> hand landmarks
+    </div>
+    <div id="calibInfo"></div>
+    <div class="note">教育用デモです。医療判断には使用しないでください。 (Education only — not for clinical use.)</div>
+  </section>
+  <section>
+    <div id="fig"></div>
+    <label style="display:inline-flex;gap:4px;margin-top:6px"><input type="checkbox" id="applyRoot" checked> apply root rotation (camera view)</label>
+    <span class="legend">orange = thumb direction, magenta = palm normal → pronation</span>
+    <table id="angles"><tbody></tbody></table>
+  </section>
+</main>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { stickFK, DEFAULT_DIMS, SIDES, anatomicalPose } from './src/shared/conventions.js';
+import { createPipeline } from './src/tracking/pipeline.js';
+import { synthesizeFrame, makeRng } from './src/tracking/synth.js';
+import { projectOrtho, projectPerspective } from './src/tracking/alignment.js';
+
+const $ = (id) => document.getElementById(id);
+const video = $('video'), ov = $('ov'), ctx = ov.getContext('2d');
+const status = (m) => { $('status').textContent = m; $('status').title = m; console.log('[tracking]', m); };
+window.addEventListener('error', (e) => status(`error: ${e.message}`));
+window.addEventListener('unhandledrejection', (e) => status(`error: ${e.reason?.message ?? e.reason}`));
+
+let tracker = null, stream = null, synth = null, last = null;
+const CAL_KEY = 'bonesim.calibration.v1';
+
+// ---------------- 3D stick figure ----------------
+const fig = $('fig');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(devicePixelRatio);
+fig.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const cam3 = new THREE.PerspectiveCamera(35, 1, 0.05, 50);
+cam3.position.set(0, 0.1, 4.2);   // in front of the subject = same viewpoint as the webcam
+const controls = new OrbitControls(cam3, renderer.domElement);
+controls.target.set(0, 0, 0); controls.update();
+scene.add(new THREE.GridHelper(4, 16, 0x335566, 0x1b2a36).translateY(-0.98));
+scene.add(new THREE.AxesHelper(0.25));
+const BONES = [['pelvis', 'neckBase'], ['neckBase', 'headTop'], ['neckBase', 'nose']];
+for (const s of SIDES) {
+  const k = (n) => `${n}_${s}`;
+  BONES.push(['neckBase', k('shoulder')], [k('shoulder'), k('elbow')], [k('elbow'), k('wrist')], [k('wrist'), k('handTip')],
+    ['pelvis', k('hip')], [k('hip'), k('knee')], [k('knee'), k('ankle')], [k('ankle'), k('heel')], [k('heel'), k('toe')], [k('ankle'), k('toe')]);
+}
+const mkLines = (n, color) => {
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 6), 3));
+  const l = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color })); scene.add(l); return l;
+};
+const boneLines = mkLines(BONES.length, 0xdde6ee);
+const thumbLines = mkLines(2, 0xff8a3d);
+const palmLines = mkLines(2, 0xd06bff);
+const joints = new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(new Float32Array(BONES.length * 6), 3)),
+  new THREE.PointsMaterial({ color: 0x4fd1ff, size: 0.035 }));
+scene.add(joints);
+function resize3() { const w = fig.clientWidth, h = fig.clientHeight; renderer.setSize(w, h, false); cam3.aspect = w / h; cam3.updateProjectionMatrix(); }
+new ResizeObserver(resize3).observe(fig); resize3();
+
+function updateFigure(pose, dims) {
+  const p = structuredClone(pose);
+  if (!$('applyRoot').checked) delete p.root;
+  const { positions: P, quaternions: Q } = stickFK(p, dims);
+  const a = boneLines.geometry.attributes.position.array;
+  BONES.forEach(([u, v], i) => { a.set([P[u].x, P[u].y, P[u].z, P[v].x, P[v].y, P[v].z], i * 6); });
+  boneLines.geometry.attributes.position.needsUpdate = true;
+  joints.geometry.attributes.position.array.set(a); joints.geometry.attributes.position.needsUpdate = true;
+  const t = thumbLines.geometry.attributes.position.array, n = palmLines.geometry.attributes.position.array;
+  SIDES.forEach((s, i) => {
+    const th = P[`thumbSide_${s}`], pk = P[`pinkySide_${s}`];
+    const mid = th.clone().add(pk).multiplyScalar(0.5);
+    const thumbEnd = mid.clone().add(th.clone().sub(pk).multiplyScalar(1.5));
+    t.set([mid.x, mid.y, mid.z, thumbEnd.x, thumbEnd.y, thumbEnd.z], i * 6);
+    const nz = new THREE.Vector3(0, 0, 0.08).applyQuaternion(Q[`hand_${s}`]).add(mid);
+    n.set([mid.x, mid.y, mid.z, nz.x, nz.y, nz.z], i * 6);
+  });
+  thumbLines.geometry.attributes.position.needsUpdate = true; palmLines.geometry.attributes.position.needsUpdate = true;
+}
+(function loop3() { requestAnimationFrame(loop3); renderer.render(scene, cam3); })();
+updateFigure(anatomicalPose(), DEFAULT_DIMS);
+
+// ---------------- 2D overlay ----------------
+const POSE_EDGES = [[11, 12], [11, 13], [13, 15], [12, 14], [14, 16], [11, 23], [12, 24], [23, 24], [23, 25], [25, 27], [24, 26], [26, 28],
+  [27, 29], [29, 31], [27, 31], [28, 30], [30, 32], [28, 32], [15, 17], [15, 19], [17, 19], [15, 21], [16, 18], [16, 20], [18, 20], [16, 22], [0, 2], [0, 5], [2, 7], [5, 8]];
+const HAND_EDGES = [[0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8], [5, 9], [9, 10], [10, 11], [11, 12], [9, 13], [13, 14], [14, 15], [15, 16], [13, 17], [0, 17], [17, 18], [18, 19], [19, 20]];
+const FK_EDGES = BONES;
+
+function drawOverlay(res, bgVisible) {
+  const W = res.landmarks2D?.width ?? ov.width, H = res.landmarks2D?.height ?? ov.height;
+  if (ov.width !== W || ov.height !== H) { ov.width = W; ov.height = H; $('stage').style.aspectRatio = `${W} / ${H}`; }
+  ctx.clearRect(0, 0, W, H);
+  if (!bgVisible) { ctx.fillStyle = '#0b0f13'; ctx.fillRect(0, 0, W, H); }
+  if (!res.landmarks2D) return;
+  const mirrored = res.landmarks2D.inputMirrored;
+  const toPx = (l) => [(mirrored ? 1 - l.x : l.x) * W, l.y * H];
+  const lm = res.landmarks2D.raw;
+  ctx.lineWidth = Math.max(1.5, W / 500);
+  for (const [a, b] of POSE_EDGES) {
+    const v = Math.min(lm[a].visibility ?? 1, lm[b].visibility ?? 1);
+    ctx.strokeStyle = `rgba(231,195,90,${0.25 + 0.75 * v})`;
+    const [x1, y1] = toPx(lm[a]), [x2, y2] = toPx(lm[b]);
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  }
+  for (const h of res.hands || []) {
+    ctx.strokeStyle = 'rgba(208,107,255,0.9)';
+    for (const [a, b] of HAND_EDGES) { const [x1, y1] = toPx(h.landmarks2D[a]), [x2, y2] = toPx(h.landmarks2D[b]); ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
+  }
+  // stickFK of the stabilised pose, projected with the alignment
+  if (res.alignment?.valid && res.pose) {
+    const { positions: P } = stickFK(res.pose, res.dims);
+    const proj = $('proj').value === 'persp' ? projectPerspective : projectOrtho;
+    const pp = (k) => proj(res.alignment, [P[k].x, P[k].y, P[k].z]);
+    ctx.strokeStyle = 'rgba(79,209,255,0.95)'; ctx.lineWidth = Math.max(2, W / 320);
+    for (const [u, v] of FK_EDGES) { const [x1, y1] = pp(u), [x2, y2] = pp(v); ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
+    ctx.strokeStyle = 'rgba(255,138,61,1)';
+    for (const s of SIDES) { const [x1, y1] = pp(`pinkySide_${s}`), [x2, y2] = pp(`thumbSide_${s}`); ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
+  }
+}
+
+// ---------------- angle table ----------------
+const rows = new Map();
+function flatten(o, pre = '', out = []) {
+  for (const [k, v] of Object.entries(o)) {
+    if (k === 'root' || k === 'confidence') continue;
+    const p = pre ? `${pre}.${k}` : k;
+    if (typeof v === 'number') out.push([p, v]); else if (v && typeof v === 'object') flatten(v, p, out);
+  }
+  return out;
+}
+const confOf = (conf, p) => { const parts = p.split('.'); for (let n = parts.length; n > 0; n--) { const k = parts.slice(0, n).join('.'); if (conf?.[k] !== undefined) return conf[k]; } return 1; };
+function updateTable(pose) {
+  const tb = $('angles').tBodies[0];
+  for (const [p, v] of flatten(pose)) {
+    let r = rows.get(p);
+    if (!r) {
+      const tr = document.createElement('tr'); tr.innerHTML = `<td>${p}</td><td class="v"></td><td class="c"><div class="bar"><i></i></div></td>`;
+      tb.appendChild(tr); r = { tr, v: tr.children[1], bar: tr.querySelector('i') }; rows.set(p, r);
+    }
+    const c = confOf(pose.confidence, p);
+    r.v.textContent = v.toFixed(1) + '°'; r.bar.style.width = `${Math.round(c * 100)}%`; r.tr.className = c < 0.3 ? 'low' : '';
+  }
+}
+
+let resultCount = 0;
+function onResult(res) {
+  last = res; resultCount++;
+  drawOverlay(res, $('source').value === 'camera');
+  if (res.pose) { updateFigure(res.pose, res.dims); updateTable(res.pose); }
+  $('fps').textContent = `${(res.fps ?? 0).toFixed(1)} fps${res.detected ? '' : ' (no person)'} · dims ${res.dimsSource}` +
+    (res.camera ? ` · fovY ${res.camera.fovY.toFixed(0)}°${res.camera.fovEstimated === false ? '?' : ''}` : '') +
+    (res.alignment ? ` · fit ${res.alignment.ortho.rmsPx.toFixed(1)} px` : '');
+}
+
+// ---------------- calibration persistence ----------------
+function showCalib(c) {
+  $('calibInfo').textContent = c ? `calibration: height ≈ ${c.height.toFixed(2)} m · ` +
+    Object.entries(c.dims).map(([k, v]) => `${k} ${(v * 100).toFixed(1)}cm`).join(' · ') +
+    ` · neckPitchOffset ${c.neckPitchOffset?.toFixed(1)}° · frames ${c.quality.frames}, stillness ${c.quality.stillnessMm?.toFixed(1)} mm` +
+    (c.quality.defaulted.length ? ` · defaulted: ${c.quality.defaulted.join(', ')}` : '') : 'not calibrated (default dims)';
+}
+const savedCal = (() => { try { return JSON.parse(localStorage.getItem(CAL_KEY)); } catch { return null; } })();
+showCalib(savedCal);
+const activePipeline = () => tracker?.pipeline ?? synth?.pipeline;
+$('calib').onclick = async () => {
+  const pl = activePipeline(); if (!pl) { status('start a source first'); return; }
+  for (let i = 3; i > 0; i--) { status(`calibration in ${i} … stand still facing the camera, arms slightly away from the body`); await new Promise((r) => setTimeout(r, 1000)); }
+  status('capturing calibration (2.5 s) …');
+  try {
+    const c = await pl.calibrate({ durationMs: 2500 });
+    localStorage.setItem(CAL_KEY, JSON.stringify(c)); showCalib(c); status('calibrated');
+  } catch (e) { status(`calibration failed: ${e.message}`); }
+};
+$('clearCalib').onclick = () => { localStorage.removeItem(CAL_KEY); activePipeline()?.setCalibration(null); showCalib(null); };
+
+// ---------------- sources ----------------
+function pipelineOptions() { return { inputMirrored: $('inputMirrored').checked, useHands: $('hands').checked }; }
+
+async function listDevices() {
+  try {
+    const devs = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'videoinput');
+    const sel = $('device'), cur = sel.value; sel.innerHTML = '<option value="">(default device)</option>';
+    devs.forEach((d, i) => { const o = document.createElement('option'); o.value = d.deviceId; o.textContent = d.label || `camera ${i + 1}`; sel.appendChild(o); });
+    sel.value = cur;
+  } catch { /* ignore */ }
+}
+
+async function startCamera() {
+  stopAll();
+  video.style.display = '';
+  const dev = $('device').value;
+  const constraints = { audio: false, video: dev ? { deviceId: { exact: dev }, width: { ideal: 1280 }, height: { ideal: 720 } }
+    : { facingMode: $('facing').value, width: { ideal: 1280 }, height: { ideal: 720 } } };
+  status('requesting camera …');
+  stream = await navigator.mediaDevices.getUserMedia(constraints);
+  video.srcObject = stream; await video.play();
+  listDevices();
+  if (!tracker) {
+    status('loading MediaPipe …');
+    const { createTracker } = await import('./src/tracking/tracker.js');
+    tracker = await createTracker({ video, onResult, options: { ...pipelineOptions(), hands: $('hands').checked, modelVariant: $('variant').value, delegate: $('delegate').value, onStatus: status } });
+    if (savedCal || localStorage.getItem(CAL_KEY)) tracker.setCalibration(JSON.parse(localStorage.getItem(CAL_KEY)));
+  }
+  tracker.start();
+  status(`tracking · pose ${tracker.info.poseVariant} (${tracker.info.poseModel?.includes('googleapis') ? 'remote' : 'local'}, ${tracker.info.poseDelegate})` +
+    (tracker.info.handModel ? ` · hands (${tracker.info.handDelegate})` : ''));
+}
+
+function animatedPose(t) {
+  const p = anatomicalPose(); p.root = { position: [0, 0, 0], quaternion: [0, Math.sin(0.15 * Math.sin(0.3 * t)), 0, Math.cos(0.15 * Math.sin(0.3 * t))] };
+  for (const s of SIDES) {
+    const ph = s === 'left' ? 0 : Math.PI;
+    p[s].shoulder = { elevation: 45 + 35 * Math.sin(0.6 * t + ph), plane: 45 + 40 * Math.sin(0.35 * t), axialRotation: 25 * Math.sin(0.5 * t) };
+    p[s].elbow.flexion = 80 + 50 * Math.sin(2 * Math.PI * 0.35 * t + ph);
+    p[s].forearm.pronation = 80 * Math.sin(2 * Math.PI * 0.25 * t);
+    p[s].wrist = { flexion: 25 * Math.sin(0.9 * t), ulnarDeviation: 10 };
+    p[s].hip = { flexion: 20 + 20 * Math.sin(0.7 * t + ph), abduction: 8, axialRotation: 10 * Math.sin(0.4 * t) };
+    p[s].knee.flexion = 25 + 25 * Math.sin(0.7 * t + ph);
+    p[s].fingers = { index: { mcp: 30 + 30 * Math.sin(t), pip: 40, dip: 20, mcpAbduction: 0 }, middle: { mcp: 30, pip: 40, dip: 20, mcpAbduction: 0 }, ring: { mcp: 30, pip: 40, dip: 20, mcpAbduction: 0 }, little: { mcp: 30, pip: 40, dip: 20, mcpAbduction: 0 }, thumb: { cmcFlexion: 10, cmcAbduction: 30, mcp: 20, ip: 20 } };
+  }
+  p.spine = { flexion: 0, lateralBend: 8 * Math.sin(0.5 * t), axialRotation: 15 * Math.sin(0.3 * t) };
+  p.neck = { flexion: 10 * Math.sin(0.8 * t), lateralBend: 0, axialRotation: 30 * Math.sin(0.5 * t) };
+  return p;
+}
+function startSynthetic() {
+  stopAll();
+  video.style.display = 'none';
+  const pipeline = createPipeline(pipelineOptions());
+  const saved = localStorage.getItem(CAL_KEY); if (saved) pipeline.setCalibration(JSON.parse(saved));
+  const rng = makeRng(5); const t0 = performance.now(); let fps = 0, lastT = 0, raf = 0;
+  const step = () => {
+    raf = requestAnimationFrame(step);
+    const now = performance.now(), t = (now - t0) / 1000;
+    const fr = synthesizeFrame(animatedPose(t), { noise: 0.01, handNoise: 0.003, pixelNoise: 1.5, rng, inputMirrored: $('inputMirrored').checked, withHands: $('hands').checked });
+    const res = pipeline.process({ t: now, ...fr });
+    if (lastT) fps += (1000 / (now - lastT) - fps) * 0.1; lastT = now; res.fps = fps;
+    onResult(res);
+  };
+  step();
+  synth = { pipeline, stop: () => cancelAnimationFrame(raf) };
+  status('synthetic source: animated stickFK pose + 1 cm landmark noise (no camera / models needed)');
+}
+function stopAll() {
+  tracker?.stop();
+  stream?.getTracks().forEach((t) => t.stop()); stream = null;
+  synth?.stop(); synth = null;
+}
+
+$('start').onclick = async () => {
+  try { if ($('source').value === 'camera') await startCamera(); else startSynthetic(); }
+  catch (e) { status(`start failed: ${e.message ?? e}`); console.error(e); }
+};
+$('facing').onchange = () => { $('device').value = ''; $('mirror').checked = $('facing').value === 'user'; $('stage').classList.toggle('mirror', $('mirror').checked); if (stream) $('start').onclick(); };
+$('device').onchange = () => { if (stream) $('start').onclick(); };
+$('mirror').onchange = () => $('stage').classList.toggle('mirror', $('mirror').checked);
+$('stage').classList.toggle('mirror', $('mirror').checked);
+$('hands').onchange = () => { tracker?.setOptions({ hands: $('hands').checked, useHands: $('hands').checked }); synth?.pipeline.setOptions({ useHands: $('hands').checked }); };
+$('inputMirrored').onchange = () => { tracker?.setOptions({ inputMirrored: $('inputMirrored').checked }); synth?.pipeline.setOptions({ inputMirrored: $('inputMirrored').checked }); };
+$('variant').onchange = async () => { if (tracker) { status('switching model …'); await tracker.setOptions({ modelVariant: $('variant').value }); status(`model ${tracker.info.poseVariant}`); } };
+$('source').onchange = () => { stopAll(); status('press Start'); };
+$('delegate').onchange = async () => { if (tracker) { status('switching delegate …'); await tracker.setOptions({ delegate: $('delegate').value }); status(`pose delegate ${tracker.info.poseDelegate}`); } };
+if (new URLSearchParams(location.search).has('cpu')) $('delegate').value = 'CPU';
+// auto-start synthetic mode with ?synthetic
+if (new URLSearchParams(location.search).has('synthetic')) { $('source').value = 'synthetic'; startSynthetic(); }
+window.__bonesimDebug = { get last() { return last; }, get count() { return resultCount; } };
+</script>
+</body>
+</html>

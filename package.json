@@ -1,0 +1,20 @@
+{
+  "name": "bonesim",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "node tests/conventions.test.mjs && node tests/rig.test.mjs && node tests/tracking.test.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "three": "^0.187.0"
+  },
+  "type": "module"
+}
