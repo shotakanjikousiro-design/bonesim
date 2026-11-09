@@ -54,10 +54,10 @@ src/rig/coupling.js         連動運動（肩甲上腕リズム、手関節の�
 src/rig/materials.js        X線風シェーダーなど
 src/rig/skinBinding.js      皮膚メッシュを骨に追従させる簡易スキニング
 src/app/                    UI（main / simulator / cameraMode / presets / labels / style.css）
-src/tracking/               カメラ → 姿勢推定（MediaPipe）→ Pose、位置合わせ（noTelemetry.js：MediaPipe の利用統計送信を遮断）
+src/tracking/               カメラ → 姿勢推定（MediaPipe）→ Pose、位置合わせ（closeup.js：映り方の判定・顔/手のアップ、noTelemetry.js：利用統計送信の遮断）
 assets/skeleton.glb, rig.json   骨モデルと関節中心・軸（BodyParts3D 由来）
 vendor/three, vendor/mediapipe  ライブラリ（同梱）
-tests/                      node テスト（rig / conventions / tracking）、アセット検査、ブラウザのスモークテスト
+tests/                      node テスト（rig / conventions / tracking / closeup）、アセット検査、ブラウザのスモークテスト、写真での実モデル確認（closeup_photo.py）
 docs/                       レビュー（REVIEW.md）・アセット確認画像、docs/screenshots/ にスモークテストの画面
 tracking-debug.html         追跡のデバッグ画面（開発者向け）
 ```
@@ -78,6 +78,7 @@ tracking-debug.html         追跡のデバッグ画面（開発者向け）
 ## 既知の制限
 - **実際の人物でのカメラ追跡精度は未検証**です（テストは合成データのみ）。表示はあくまで推定です。
 - 真横（側面）や、カメラに向かって伸ばした腕・脚は、奥行きの推定誤差が大きく精度が落ちます。
+- カメラモードは映り方（全身／上半身／顔・肩／顔／手）を自動判定します。アップでは遠近法カメラで重ね、頭蓋は顔の特徴点に（平均的な成人の頭の大きさを仮定）、手の骨は手の特徴点に合わせます。映っていない部分の骨は描きません。アップの映像からは体格（骨の長さ）を学習しません。
 - 前腕の回内・回外と手関節は、手がはっきり映っている（手の追跡ON）ときのみ比較的正確です。肘を伸ばしていると肩の回旋と前腕の回内外は区別できません。
 - 肩甲骨・鎖骨・膝蓋骨・スクリューホーム・脊柱の分配は映像からではなくモデルによる推定です。骨は標準的な骨格（BodyParts3D）を体格に合わせて伸縮したもので、本人の骨ではありません。
 - 皮膚表示は簡易スキニングで、大きく動かすと一部に隙間ができます。尾骨は含まれていません。

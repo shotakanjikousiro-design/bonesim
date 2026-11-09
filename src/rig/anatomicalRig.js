@@ -543,19 +543,141 @@ export async function createRig({ scene, glbUrl, rigUrl, gltf, rigData, skin = t
     state.coupling = o.coupling; state.autoHumeralRotation = o.autoHumeralRotation; state.useRoot = o.useRoot;
     const { q, t, derived } = solve(p, o);
     for (const seg of order) {
+      seg.group.matrixAutoUpdate = true;
       seg.group.quaternion.copy(q[seg.id]);
       seg.group.position.copy(seg.basePos); if (t[seg.id]) seg.group.position.add(t[seg.id]);
     }
     state.pose = p; state.derived = derived;
+    applyCloseup();
     return derived;
   }
 
+  // ---------------- close-up overrides (camera mode) ----------------
+  // head: {ao:[x,y,z], quaternion:[x,y,z,w]} in ROOT-LOCAL coordinates → the skull is placed on
+  //   the face fit; the cervical chain bends/stretches (×0.6–1.6) to connect it to the thorax
+  //   (a remaining gap is left between C1 and the skull rather than moving the skull off the face).
+  // hands: {left?: 21×[x,y,z], right?: …} root-local MediaPipe hand landmarks → carpals/metacarpals
+  //   by a similarity fit (wrist, MCP2/3/5), each phalanx on its landmark segment (length matched).
+  let neckBaseK = 1, neckStretch = 1;
+  function applyNeckScale() {
+    for (const id of ['C7', 'C6', 'C5', 'C4', 'C3', 'C2', 'C1']) setSegScale(id, diagS(1, neckBaseK * neckStretch, 1));
+    for (const id of ['C6', 'C5', 'C4', 'C3', 'C2', 'C1', 'skull']) { const sg = segs[id]; sg.basePos = restOffset(sg).applyMatrix3(segs[sg.parent].S); sg.group.position.copy(sg.basePos); }
+  }
+  const _m4 = new THREE.Matrix4(), _rootInv = new THREE.Matrix4();
+  const rootLocal = (obj, target = new THREE.Matrix4()) => { obj.updateWorldMatrix(true, false); return target.multiplyMatrices(_rootInv, obj.matrixWorld); };
+  function setRootLocalMatrix(seg, M) { // M: desired root-local matrix of the group
+    const P = rootLocal(seg.group.parent);
+    seg.group.matrixAutoUpdate = false;
+    seg.group.matrix.copy(P.invert().multiply(M));
+    seg.group.matrixWorldNeedsUpdate = true; seg.group.updateMatrixWorld(true);
+  }
+  function applyCloseup() {
+    const cu = state.closeup; if (!cu) { if (neckStretch !== 1) { neckStretch = 1; applyNeckScale(); } return; }
+    root.updateMatrixWorld(true); _rootInv.copy(root.matrixWorld).invert();
+    // ---- head ----
+    if (cu.head) {
+      const target = new THREE.Vector3(...cu.head.ao);
+      const c7 = segs.C7, sk = segs.skull, neckIds = ['C7', 'C6', 'C5', 'C4', 'C3', 'C2', 'C1'];
+      const p0 = new THREE.Vector3().setFromMatrixPosition(rootLocal(c7.group));
+      for (let it = 0; it < 4; it++) {
+        const pc = new THREE.Vector3().setFromMatrixPosition(rootLocal(sk.group));
+        const vc = pc.clone().sub(p0), vt = target.clone().sub(p0);
+        if (vc.length() < 1e-6 || vt.length() < 1e-6) break;
+        const kNew = Math.min(1.6, Math.max(0.6, neckStretch * vt.length() / vc.length()));
+        if (Math.abs(kNew - neckStretch) > 1e-4) { neckStretch = kNew; applyNeckScale(); root.updateMatrixWorld(true); continue; }
+        const swing = new THREE.Quaternion().setFromUnitVectors(vc.normalize(), vt.normalize());
+        if (swing.w > 0.99999) break;
+        const part = new THREE.Quaternion().slerp(swing, 1 / neckIds.length); // identity → swing, equal share per level
+        for (const id of neckIds) {
+          const g = segs[id].group; const parentRot = new THREE.Quaternion();
+          g.parent.updateWorldMatrix(true, false); rootLocal(g.parent, _m4).decompose(new THREE.Vector3(), parentRot, new THREE.Vector3());
+          g.quaternion.premultiply(parentRot.clone().invert().multiply(part).multiply(parentRot));
+          g.updateMatrixWorld(true);
+        }
+      }
+      const parentM = rootLocal(sk.group.parent, new THREE.Matrix4()); const parentRot = new THREE.Quaternion(), parentPos = new THREE.Vector3(), parentScl = new THREE.Vector3();
+      parentM.decompose(parentPos, parentRot, parentScl);
+      if (cu.head.quaternion) sk.group.quaternion.copy(parentRot.clone().invert().multiply(new THREE.Quaternion(...cu.head.quaternion)));
+      // whatever the neck could not bridge (stretch limits): the skull still sits on the face
+      sk.group.position.copy(target.clone().applyMatrix4(parentM.clone().invert()));
+      sk.group.updateMatrixWorld(true);
+    } else if (neckStretch !== 1) { neckStretch = 1; applyNeckScale(); }
+    // ---- hands ----
+    for (const side of SIDES) {
+      const L = cu.hands?.[side]; if (!L || L.length < 21) continue;
+      const x = SFX[side]; const V = (i) => new THREE.Vector3(...L[i]);
+      const jc = (id) => V3(J[`${id}_${x}`].center);
+      const restPts = [jc('radiocarpal'), jc('mcp2'), jc('mcp3'), jc('mcp5')], tgtPts = [V(0), V(5), V(9), V(17)];
+      const sim = similarity(restPts, tgtPts); if (!sim) continue;
+      const A0 = new THREE.Matrix3().setFromMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(sim.q)).multiplyScalar(sim.s);
+      const place = (segId, A, b) => { // world-rest v ↦ A v + b ; group frame = S(v − c)
+        const seg = segs[segId]; if (!seg) return;
+        const AS = A.clone().multiply(seg.S.clone().invert()); const tr = seg.center.clone().applyMatrix3(A).add(b);
+        const e = AS.elements; // column-major
+        const M = new THREE.Matrix4().set(e[0], e[3], e[6], tr.x, e[1], e[4], e[7], tr.y, e[2], e[5], e[8], tr.z, 0, 0, 0, 1);
+        setRootLocalMatrix(seg, M);
+      };
+      const b0 = sim.t;
+      for (const id of [`ulna_${x}`, `radius_${x}`, `carpalsProximal_${x}`, `hand_${x}`]) place(id, A0, b0);
+      const tip = (n) => V3(R.landmarks[`${n}Tip_${x}`]);
+      const bones = [
+        ['thumbMeta', jc('cmc1'), jc('mcp1'), 1, 2], ['thumbProx', jc('mcp1'), jc('ip1'), 2, 3], ['thumbDist', jc('ip1'), tip('thumb'), 3, 4],
+      ];
+      for (const [fname, n, i0] of [['index', 2, 5], ['middle', 3, 9], ['ring', 4, 13], ['little', 5, 17]]) {
+        bones.push([`${fname}Prox`, jc(`mcp${n}`), jc(`pip${n}`), i0, i0 + 1], [`${fname}Mid`, jc(`pip${n}`), jc(`dip${n}`), i0 + 1, i0 + 2], [`${fname}Dist`, jc(`dip${n}`), tip(fname), i0 + 2, i0 + 3]);
+      }
+      for (const [name, c, e, ia, ib] of bones) {
+        const dr = e.clone().sub(c).applyQuaternion(sim.q); const dt = V(ib).sub(V(ia));
+        if (dr.length() < 1e-6 || dt.length() < 1e-6) continue;
+        const k = dt.length() / e.distanceTo(c);
+        const sw = new THREE.Quaternion().setFromUnitVectors(dr.normalize(), dt.clone().normalize()).multiply(sim.q);
+        const A = new THREE.Matrix3().setFromMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(sw)).multiplyScalar(k);
+        const b = V(ia).sub(c.clone().applyMatrix3(A));
+        place(`${name}_${x}`, A, b);
+      }
+    }
+  }
+  /** least-squares similarity (Umeyama): target ≈ s·R·rest + t */
+  function similarity(P, Qp) {
+    const n = P.length; const cp = new THREE.Vector3(), cq = new THREE.Vector3();
+    P.forEach((p) => cp.add(p)); Qp.forEach((q) => cq.add(q)); cp.multiplyScalar(1 / n); cq.multiplyScalar(1 / n);
+    const H = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]; let vp = 0;
+    for (let i = 0; i < n; i++) {
+      const a = P[i].clone().sub(cp), b = Qp[i].clone().sub(cq); vp += a.lengthSq();
+      const A = [a.x, a.y, a.z], B = [b.x, b.y, b.z]; for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) H[r][c] += B[r] * A[c];
+    }
+    // rotation from H via Horn's quaternion method (4×4 symmetric, power iteration)
+    const [[Sxx, Sxy, Sxz], [Syx, Syy, Syz], [Szx, Szy, Szz]] = [[H[0][0], H[1][0], H[2][0]], [H[0][1], H[1][1], H[2][1]], [H[0][2], H[1][2], H[2][2]]];
+    const N = [[Sxx + Syy + Szz, Syz - Szy, Szx - Sxz, Sxy - Syx], [Syz - Szy, Sxx - Syy - Szz, Sxy + Syx, Szx + Sxz],
+      [Szx - Sxz, Sxy + Syx, -Sxx + Syy - Szz, Syz + Szy], [Sxy - Syx, Szx + Sxz, Syz + Szy, -Sxx - Syy + Szz]];
+    const shift = Math.abs(N[0][0]) + Math.abs(N[1][1]) + Math.abs(N[2][2]) + Math.abs(N[3][3]) + 1e-9;
+    let v = [1, 0, 0, 0];
+    for (let it = 0; it < 200; it++) {
+      const w = [0, 1, 2, 3].map((r) => N[r].reduce((acc, nv, c) => acc + nv * v[c], 0) + shift * v[r]);
+      const l = Math.hypot(...w); if (!(l > 0)) return null; v = w.map((x) => x / l);
+    }
+    const q = new THREE.Quaternion(v[1], v[2], v[3], v[0]).normalize();
+    let num = 0;
+    for (let i = 0; i < n; i++) num += Qp[i].clone().sub(cq).dot(P[i].clone().sub(cp).applyQuaternion(q));
+    const sc = num / vp; if (!(sc > 0)) return null;
+    const t = cq.clone().sub(cp.clone().applyQuaternion(q).multiplyScalar(sc));
+    return { s: sc, q, t };
+  }
+
   // ---------------- display ----------------
-  let style = 'xray'; let highlighted = null; let skinOpacity = 0; let faded = new Set();
+  let style = 'xray'; let highlighted = null; let skinOpacity = 0; let faded = new Set(); let hiddenSegs = new Set();
+  /** hide segments (close-ups: nothing hallucinated outside the visible part); pass null/[] to show all */
+  function setHiddenSegments(ids) {
+    const next = new Set(ids || []);
+    if (next.size === hiddenSegs.size && [...next].every((x) => hiddenSegs.has(x))) return;
+    hiddenSegs = next; applyMaterials();
+    for (const a of axisObjs) a.holder.userData.hiddenByCloseup = hiddenSegs.has(a.seg.id);
+    for (const [name, o] of Object.entries(landmarkObjs)) o.userData.hiddenByCloseup = hiddenSegs.has(o.parent?.parent?.name?.slice(4));
+  }
   function applyMaterials() {
     for (const seg of order) for (const m of seg.meshes) {
       const hl = m === highlighted, fd = !hl && faded.has(seg.id);
-      m.visible = style !== 'hidden';
+      m.visible = style !== 'hidden' && !hiddenSegs.has(seg.id);
       m.material = style === 'bone' ? (hl ? mats.boneHL : fd ? mats.boneFaded : mats.bone) : (hl ? mats.xrayHL : fd ? mats.xrayFaded : mats.xray);
       m.renderOrder = style === 'bone' ? 0 : 1;
     }
@@ -627,7 +749,14 @@ export async function createRig({ scene, glbUrl, rigUrl, gltf, rigData, skin = t
     const yT = k('thoraxHeight');
     for (const id of ['L5', 'L4', 'L3', 'L2', 'L1', 'thorax']) setSegScale(id, diagS(1, yT, 1));
     setSegScale('pelvis', diagS(k('hipHalfWidth'), yT, 1));
-    const kn = k('neck'), kh = k('head');
+    // Head & neck: the tracker's `head`/`neck` dims are stick-figure quantities (DEFAULT_DIMS head
+    // 0.20 / neck 0.10 vs this skeleton's 0.26 / 0.05 by the same definition) — scaling the skull
+    // and cervical spine by them shrank the skull ×0.77 and stretched the neck ×1.45 (close-up bug).
+    // The skull keeps its anatomical (average adult) size — camera-mode close-ups fit it to the
+    // face — and the cervical spine follows the overall body scale (bounded).
+    const body = ['upperArm', 'forearm', 'thigh', 'shank', 'shoulderHalfWidth'].map(k).sort((a, b) => a - b)[2];
+    const kn = Math.min(1.15, Math.max(0.85, body)), kh = 1;
+    neckBaseK = kn; neckStretch = 1;
     for (const id of ['C7', 'C6', 'C5', 'C4', 'C3', 'C2', 'C1']) setSegScale(id, diagS(1, kn, 1));
     setSegScale('skull', diagS(kh, kh, kh));
     for (const side of SIDES) {
@@ -681,7 +810,11 @@ export async function createRig({ scene, glbUrl, rigUrl, gltf, rigData, skin = t
     setCoupling: (b) => { state.coupling = !!b; setPose(state.pose); },
     setAutoHumeralRotation: (b) => { state.autoHumeralRotation = !!b; setPose(state.pose); },
     setUseRoot: (b) => { state.useRoot = !!b; setPose(state.pose); },
-    highlight, nodeInfo, setStyle, setConfidence, getStyle: () => style, setSkin, showAxes, showLandmarks, scaleToDims,
+    highlight, nodeInfo, setStyle, setConfidence, setHiddenSegments,
+    /** close-up overrides {head?, hands?} in root-local coordinates (null = off); applied on every setPose */
+    setCloseup: (cu, { apply = true } = {}) => { state.closeup = cu || null; if (apply) setPose(state.pose); },
+    /** root-local position of a segment's pivot (joint centre) */
+    rootLocalPosition: (segId, target = new THREE.Vector3()) => { root.updateMatrixWorld(true); _rootInv.copy(root.matrixWorld).invert(); return target.setFromMatrixPosition(rootLocal(segs[segId].group)); }, getStyle: () => style, setSkin, showAxes, showLandmarks, scaleToDims,
     landmarkWorld, jointWorld, segmentWorldQuaternion, pickables, solve,
     restPose: REST,
     elbowInfo: (side) => ({ ...elbowModel[side] }),

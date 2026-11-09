@@ -16,6 +16,39 @@
 // =====================================================================
 import * as THREE from 'three';
 import { DEFAULT_DIMS } from '../shared/conventions.js';
+import { FRAMINGS, landmarkOk } from '../tracking/closeup.js';
+
+/**
+ * Segments hidden per framing in close-ups: nothing is drawn for body parts that are
+ * outside the picture (MediaPipe would only be guessing them).
+ */
+const LEG_SEGS = ['femur', 'patella', 'tibia', 'talus', 'foot'];
+const ARM_DISTAL = ['ulna', 'radius', 'carpalsProximal', 'hand', 'thumbMeta', 'thumbProx', 'thumbDist',
+  ...['index', 'middle', 'ring', 'little'].flatMap((f) => [`${f}Prox`, `${f}Mid`, `${f}Dist`])];
+function hiddenForFraming(framing, res, rigOrder) {
+  const all = rigOrder.map((s) => s.id);
+  const lm = res.landmarks2D?.normalized;
+  const ok = (i) => landmarkOk(lm?.[i], 0.5, 0.02);
+  if (framing === 'face') return all.filter((id) => !/^(skull|C\d)$/.test(id));
+  if (framing === 'hand') {
+    const sides = new Set((res.hands || []).filter((h) => h.cameraPoints).map((h) => (h.side === 'left' ? 'L' : 'R')));
+    return all.filter((id) => { const m = id.match(/^(.*)_([LR])$/); return !(m && sides.has(m[2]) && ARM_DISTAL.includes(m[1])); });
+  }
+  const hide = [];
+  if (framing === 'headShoulders') {
+    hide.push('pelvis', 'L5', 'L4', 'L3', 'L2', 'L1');
+    for (const x of ['L', 'R']) hide.push(...LEG_SEGS.map((b) => `${b}_${x}`));
+  }
+  if (framing === 'headShoulders' || framing === 'upper') {
+    for (const [x, el, wr] of [['L', 13, 15], ['R', 14, 16]]) {
+      const handSeen = (res.hands || []).some((h) => h.side === (x === 'L' ? 'left' : 'right'));
+      if (!ok(el)) hide.push(...ARM_DISTAL.map((b) => `${b}_${x}`));
+      else if (!ok(wr) && !handSeen) hide.push(...ARM_DISTAL.filter((b) => !['ulna', 'radius'].includes(b)).map((b) => `${b}_${x}`));
+    }
+    if (framing === 'upper') for (const [x, kn] of [['L', 25], ['R', 26]]) if (!ok(kn)) hide.push(...LEG_SEGS.filter((b) => b !== 'femur').map((b) => `${b}_${x}`));
+  }
+  return hide;
+}
 
 const CAL_KEY = 'bonesim.calibration.v1';
 const isMobile = () => matchMedia('(pointer: coarse)').matches || /Android|iPhone|iPad/i.test(navigator.userAgent);
@@ -24,6 +57,9 @@ export function createCameraMode({ renderer, scene, rig, viewport, video, simCam
   const $ = ui.$;
   const pelvisCenter = new THREE.Vector3(...rig.rigData.pelvisCenter);
   const ortho = new THREE.OrthographicCamera(0, 640, 0, -480, -10000, 10000);
+  const persp = new THREE.PerspectiveCamera(55, 4 / 3, 0.01, 100);
+  /** per-result overlay plan: 'ortho' (full body, as before) or 'persp' (close-ups) + root translation */
+  let view = { mode: 'ortho', T: new THREE.Vector3() };
   let active = false, tracker = null, stream = null, facing = 'user', starting = false;
   let fileUrl = null; // video-file source (blob: URL)
   const live = () => stream || fileUrl;
@@ -211,14 +247,35 @@ export function createCameraMode({ renderer, scene, rig, viewport, video, simCam
   function onResult(res) {
     last = res;
     $('camFps').textContent = `${(res.fps ?? 0).toFixed(0)} fps`;
-    if (!res.detected) status('人物が見つかりません（全身または上半身が映るように）');
-    else status(`${res.calibrated ? '' : '未キャリブレーション・'}信頼度 ${(res.confidence * 100).toFixed(0)}%`);
+    const fr = FRAMINGS[res.framing]?.label;
+    if (!res.detected) status('人物が見つかりません（全身・上半身・顔・手のいずれかが映るように）');
+    else status(`${fr ? `【${fr}】` : ''}${res.calibrated ? '' : '未キャリブレーション・'}${res.bodyDetected === false ? '手のみ' : `信頼度 ${(res.confidence * 100).toFixed(0)}%`}`);
     if (res.dims) { // bone lengths may be auto-learned each frame → rescale at most every 0.5 s
       const k = Object.values(res.dims).map((v) => v.toFixed(3)).join(',');
       const now = performance.now();
       if (k !== dimsKey && (now - lastScaleT > 500 || !dimsKey)) { dimsKey = k; lastScaleT = now; rig.scaleToDims(res.dims); }
     }
-    if (res.pose) rig.setPose(res.pose, { useRoot: true });
+    // ---- close-ups: perspective camera, head fitted to the face, hand bones on the hand landmarks ----
+    const framing = res.framing || 'full'; const al = res.alignment;
+    if (framing === 'full' || framing === 'none') {
+      view = { mode: 'ortho', T: new THREE.Vector3() };
+      rig.setCloseup(null, { apply: false }); rig.setHiddenSegments(null);
+      if (res.pose) rig.setPose(res.pose, { useRoot: true });
+    } else {
+      const T = new THREE.Vector3(); let ok = true;
+      rig.setCloseup(null, { apply: false });
+      rig.setPose(res.pose || {}, { useRoot: true });
+      if (framing === 'hand') { /* hand landmarks are already in the camera frame */ }
+      else if (al?.valid && al.nFit >= 2) T.fromArray(al.perspective.position);
+      else if (res.head) T.fromArray(res.head.ao).sub(rig.rootLocalPosition('skull'));
+      else ok = false;
+      const cu = {};
+      if (res.head && framing !== 'hand') cu.head = { ao: new THREE.Vector3().fromArray(res.head.ao).sub(T).toArray(), quaternion: res.head.quaternion };
+      if (framing === 'hand') { cu.hands = {}; for (const h of res.hands || []) if (h.cameraPoints) cu.hands[h.side] = h.cameraPoints.map((p) => [p[0] - T.x, p[1] - T.y, p[2] - T.z]); }
+      rig.setCloseup(cu, { apply: true });
+      rig.setHiddenSegments(hiddenForFraming(framing, res, rig.order));
+      view = { mode: ok ? 'persp' : 'none', T, fovY: res.camera?.fovY ?? al?.perspective?.fovY ?? 55, framing };
+    }
     rig.setConfidence($('camFade').checked ? res.pose?.confidence : null, 0.4);
   }
 
@@ -250,7 +307,7 @@ export function createCameraMode({ renderer, scene, rig, viewport, video, simCam
     const root = rig.root;
     // --- overlay on the video ---
     const vr = rects.video; const al = last?.alignment;
-    if ((live() || demo) && al?.valid && last?.detected !== false) {
+    if ((live() || demo) && view.mode === 'ortho' && al?.valid && last?.detected !== false) {
       ortho.left = 0; ortho.right = al.width; ortho.top = 0; ortho.bottom = -al.height; ortho.updateProjectionMatrix();
       root.matrixAutoUpdate = false;
       root.matrix.fromArray(al.matrix);
@@ -258,9 +315,18 @@ export function createCameraMode({ renderer, scene, rig, viewport, video, simCam
       root.matrixWorldNeedsUpdate = true; root.updateMatrixWorld(true);
       setRect(vr, Ch);
       renderer.render(scene, ortho);
+    } else if ((live() || demo) && view.mode === 'persp' && last?.detected !== false) {
+      // pin-hole camera at the origin with the tracker's FOV; principal point = image centre
+      persp.fov = view.fovY; persp.aspect = vr.W / vr.H; persp.updateProjectionMatrix();
+      root.matrixAutoUpdate = false;
+      root.matrix.makeTranslation(view.T.x, view.T.y, view.T.z);
+      if (mirror) root.matrix.premultiply(flipM.makeScale(-1, 1, 1));
+      root.matrixWorldNeedsUpdate = true; root.updateMatrixWorld(true);
+      setRect(vr, Ch);
+      renderer.render(scene, persp);
     }
     // --- side-by-side 3D view ---
-    if (rects.view3D) {
+    if (rects.view3D && !(view.framing === 'hand' || view.framing === 'face')) {
       const r = rects.view3D;
       root.matrixAutoUpdate = true; root.position.copy(pelvisCenter); root.quaternion.identity(); root.scale.set(1, 1, 1);
       root.updateMatrixWorld(true);
@@ -285,6 +351,7 @@ export function createCameraMode({ renderer, scene, rig, viewport, video, simCam
     },
     exit() {
       active = false; stop(); $('camHud').hidden = true; rig.setConfidence(null);
+      rig.setCloseup(null, { apply: false }); rig.setHiddenSegments(null); view = { mode: 'ortho', T: new THREE.Vector3() };
       rig.root.matrixAutoUpdate = true; rig.setUseRoot(false); dimsKey = '';
       simCamera.aspect = viewport.clientWidth / viewport.clientHeight; simCamera.updateProjectionMatrix();
     },

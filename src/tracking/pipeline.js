@@ -11,6 +11,7 @@ import { LandmarkFilter, PoseStabilizer, OneEuroVector, enforceSegmentLengths } 
 import { createCalibrator, createAutoDims } from './calibration.js';
 import { computeAlignment, fitWorldToImage, refineWithImage, estimateFovY } from './alignment.js';
 import { median } from './math3.js';
+import { classifyFraming, createFramingTracker, fitHead, handToCamera, createQuatSmoother, defaultFovY, landmarkOk } from './closeup.js';
 
 export const DEFAULT_PIPELINE_OPTIONS = {
   /** frames given to MediaPipe are already horizontally mirrored */
@@ -33,7 +34,10 @@ export const DEFAULT_PIPELINE_OPTIONS = {
   /** camera vertical FOV (deg) for the perspective alignment and the image refinement:
    *  'auto' = running median of per-frame estimates (fovYDefault until enough frames) */
   fovY: 'auto',
-  fovYDefault: 55,
+  /** FOV used until enough informative frames: 'auto' = long image side spans ≈ 70° (webcams/phones) */
+  fovYDefault: 'auto',
+  /** framing changes must persist this many frames (hysteresis) */
+  framingHysteresis: 5,
   /** 0..1: replace world-landmark X/Y by the back-projected 2D landmarks (keeps MediaPipe depth).
    *  Makes bone directions agree with the video; 0 = use MediaPipe world landmarks as-is. */
   imageRefine: 1,
@@ -52,10 +56,23 @@ export function createPipeline(options = {}) {
   const handLastSeen = { left: -1e9, right: -1e9 };
   let fovSamples = [];
   /** current FOV and whether it is trustworthy (fixed by the user or >= 15 informative frames) */
+  let frameW = 640, frameH = 480;
   function currentFov() {
     if (typeof o.fovY === 'number') return { fov: o.fovY, sure: true };
     if (fovSamples.length >= 15) return { fov: median(fovSamples), sure: true };
-    return { fov: o.fovYDefault, sure: false };
+    return { fov: typeof o.fovYDefault === 'number' ? o.fovYDefault : defaultFovY(frameW, frameH), sure: false };
+  }
+  const framingT = createFramingTracker({ frames: o.framingHysteresis });
+  const headQ = createQuatSmoother(0.5), headQ2 = createQuatSmoother(0.6);
+  const focal = (fov, h) => (h / 2) / Math.tan((fov * Math.PI / 180) / 2);
+  /** never let learned / calibrated head-neck lengths blow up (close-ups, bad frames) */
+  const sane = (d) => ({ ...d, neck: Math.min(0.14, Math.max(0.04, d.neck)), head: Math.min(0.26, Math.max(0.17, d.head)) });
+  /** hands → camera-frame 3D points (for close-up hand alignment) */
+  function handsOut(handsBySide, width, height, f) {
+    return SIDES.filter((sd) => handsBySide[sd]).map((sd) => {
+      const h = handsBySide[sd];
+      return { side: sd, score: h.score, landmarks2D: h.landmarks2D, worldPoints: h.points, cameraPoints: handToCamera(h.points, h.landmarks2D, width, height, f) };
+    });
   }
   const resetFilters = () => {
     lf3 = new LandmarkFilter(o.landmarkFilter);
@@ -107,10 +124,26 @@ export function createPipeline(options = {}) {
   function process(frame) {
     const t = frame.t / 1000;
     const { width = 640, height = 480 } = frame;
+    frameW = width; frameH = height;
     if (!frame.worldLandmarks || !frame.landmarks) {
       const pose = lastPose ? stab.update(null, null, null, t) : null;
       lastPose = pose;
-      return { t: frame.t, detected: false, pose, confidence: 0, landmarks2D: null, worldLandmarks: null, bodyPoints: null, hands: [], alignment: null, dims, dimsSource, calibrated: !!calibration };
+      // no body detected: a hand close to the camera can still be shown
+      const hb = {};
+      if (o.useHands) for (const h of frame.hands || []) {
+        if (!h?.landmarks?.length || !h.worldLandmarks?.length) continue;
+        const n = o.inputMirrored ? mirrorHandLandmarks(h.landmarks, 'normalized') : h.landmarks;
+        const lab = (h.handedness?.[0]?.categoryName || 'Right').toLowerCase();
+        let sd = lab === 'left' ? 'left' : 'right'; if (o.inputMirrored) sd = sd === 'left' ? 'right' : 'left';
+        if (hb[sd]) sd = sd === 'left' ? 'right' : 'left';
+        if (hb[sd]) continue;
+        if (t - handLastSeen[sd] > 0.3) hf[sd].reset();
+        handLastSeen[sd] = t;
+        hb[sd] = { points: hf[sd].filter(prepareHand(h.worldLandmarks, { inputMirrored: o.inputMirrored }), t), landmarks2D: n, score: h.handedness?.[0]?.score ?? 1 };
+      }
+      const handsRes = handsOut(hb, width, height, focal(currentFov().fov, height));
+      const framing = framingT.update(handsRes.length ? 'hand' : 'none');
+      return { t: frame.t, detected: handsRes.length > 0, bodyDetected: false, framing, framingRaw: handsRes.length ? 'hand' : 'none', pose, confidence: 0, landmarks2D: null, worldLandmarks: null, bodyPoints: null, hands: handsRes, head: null, alignment: null, dims, dimsSource, calibrated: !!calibration };
     }
     const lm2dRaw = o.inputMirrored ? mirrorPoseLandmarks(frame.landmarks, 'normalized') : frame.landmarks;
     let worldRaw = o.inputMirrored ? mirrorPoseLandmarks(frame.worldLandmarks, 'world') : frame.worldLandmarks;
@@ -158,9 +191,13 @@ export function createPipeline(options = {}) {
       }
     }
 
-    if (!calibration && o.autoDims) {
+    // framing (per frame + hysteresis); close-up frames must not teach the body dims
+    const framingRaw = classifyFraming(lm2dRaw, SIDES.filter((sd) => handsBySide[sd]).map((sd) => handsBySide[sd]));
+    const framing = framingT.update(framingRaw);
+    const torsoGood = [11, 12, 23, 24].every((i) => landmarkOk(lm2dRaw[i], 0.7) && body.vis[i] >= 0.7);
+    if (!calibration && o.autoDims && (framingRaw === 'full' || framingRaw === 'upper') && torsoGood) {
       const a = autoDims.add({ points: pts, vis: body.vis, hands: handsBySide });
-      if (a) { dims = { ...DEFAULT_DIMS, ...a.dims }; dimsSource = 'auto'; }
+      if (a) { dims = sane({ ...DEFAULT_DIMS, ...a.dims }); dimsSource = 'auto'; }
     }
     const ptsL = (calibration || (o.autoDims && autoDims.ready)) && o.enforceBoneLengths ? enforceSegmentLengths(pts, dims) : pts;
     const ang = computePose({ points: ptsL, vis: body.vis }, { ...angleOptions(), hands: handsBySide, hold: stab.holdState() });
@@ -169,6 +206,14 @@ export function createPipeline(options = {}) {
 
     const alignment = computeAlignment({ pose, dims, landmarks2D: lm2d, width, height, inputMirrored: o.inputMirrored, fovY: fov.fov });
     if (alignment) alignment.fovEstimated = o.fovY === 'auto' ? fov.sure : null;
+    // head fitted directly to the face (eyes / ears / nose / mouth), in the camera frame
+    const f = focal(fov.fov, height);
+    let head = null;
+    if (ang.frames?.head) {
+      const hq = headQ(ang.frames.head);
+      const fit = fitHead(lm2d, hq.R, width, height, f);
+      if (fit) head = { ao: fit.ao, quaternion: headQ2(fit.R).q, rmsPx: fit.rmsPx, n: fit.n };
+    }
     const torso = [11, 12, 23, 24].map((i) => body.vis[i]);
     return {
       t: frame.t, detected: true, pose,
@@ -179,7 +224,8 @@ export function createPipeline(options = {}) {
         width, height, inputMirrored: o.inputMirrored,
       },
       worldLandmarks: worldRaw, bodyPoints: ptsL,
-      hands: SIDES.filter((s) => handsBySide[s]).map((s) => ({ side: s, score: handsBySide[s].score, landmarks2D: handsBySide[s].landmarks2D, worldPoints: handsBySide[s].points })),
+      hands: handsOut(handsBySide, width, height, f),
+      framing, framingRaw, head, bodyDetected: true,
       alignment, dims, dimsSource, calibrated: !!calibration,
       camera: { fovY: fov.fov, fovEstimated: o.fovY === 'auto' ? fov.sure : null },
       debug: { rawPose: ang.pose, observability: ang.observability },
@@ -188,7 +234,7 @@ export function createPipeline(options = {}) {
 
   function setCalibration(c) {
     calibration = c || null;
-    dims = c?.dims ? { ...DEFAULT_DIMS, ...c.dims } : { ...(autoDims.current?.dims ? { ...DEFAULT_DIMS, ...autoDims.current.dims } : DEFAULT_DIMS) };
+    dims = c?.dims ? sane({ ...DEFAULT_DIMS, ...c.dims }) : { ...(autoDims.current?.dims ? { ...DEFAULT_DIMS, ...autoDims.current.dims } : DEFAULT_DIMS) };
     dimsSource = c ? 'calibrated' : autoDims.current ? 'auto' : 'default';
   }
 
@@ -208,7 +254,7 @@ export function createPipeline(options = {}) {
       if (opts.landmarkFilter || opts.landmark2DFilter || opts.handFilter || opts.stabilizer || opts.inputMirrored !== undefined && opts.inputMirrored !== prev.inputMirrored) resetFilters();
     },
     get options() { return o; },
-    reset() { resetFilters(); lastPose = null; fovSamples = []; autoDims.reset(); if (!calibration) { dims = { ...DEFAULT_DIMS }; dimsSource = 'default'; } },
+    reset() { resetFilters(); lastPose = null; fovSamples = []; autoDims.reset(); framingT.reset(); if (!calibration) { dims = { ...DEFAULT_DIMS }; dimsSource = 'default'; } },
     get fovY() { return currentFov(); },
   };
 }

@@ -126,7 +126,7 @@ const cam = createCameraMode({ renderer, scene, rig, viewport, video: $('video')
 let mode = 'sim';
 function setMode(m) {
   if (m === mode) return;
-  mode = m;
+  mode = m; showPick(null);
   $('tabSim').classList.toggle('active', m === 'sim'); $('tabCam').classList.toggle('active', m === 'cam');
   $('tabSim').setAttribute('aria-selected', m === 'sim'); $('tabCam').setAttribute('aria-selected', m === 'cam');
   $('simPanel').hidden = m !== 'sim'; $('camPanel').hidden = m !== 'cam';

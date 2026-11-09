@@ -122,16 +122,21 @@ const mul3 = (a, b) => { const r = []; for (let i = 0; i < 3; i++) for (let j = 
  * @param inputMirrored true if frames arrived mirrored (landmarks2D were un-mirrored)
  * @param fovY        assumed vertical field of view for the perspective variant
  */
-export function computeAlignment({ pose, dims, landmarks2D, width, height, inputMirrored = false, fovY = 50, minVisibility = 0.5 }) {
+export function computeAlignment({ pose, dims, landmarks2D, width, height, inputMirrored = false, fovY = 50, minVisibility = 0.5, margin = 0.02 }) {
   if (!pose || !landmarks2D) return null;
   const mp = modelPointsFromFK(pose, dims);
   const model = [], image = [], w = [];
   for (const { p, lm, w: wj } of mp) {
     const l = landmarks2D[lm]; if (!l) continue;
     const vis = Math.min(l.visibility ?? 1, l.presence ?? 1);
+    // only joints that are visible AND inside the image: MediaPipe extrapolates joints
+    // outside the frame (hips/legs in a close-up) with deceptively high visibility
+    const inside = l.x >= -margin && l.x <= 1 + margin && l.y >= -margin && l.y <= 1 + margin;
     model.push(p); image.push([l.x * width, l.y * height]);
-    w.push(vis >= minVisibility ? wj * vis : 0);
+    w.push(vis >= minVisibility && inside ? wj * vis : 0);
   }
+  const nFit = w.filter((x) => x > 0).length;
+  if (nFit < 2) return null;
   const o = fitOrthographic(model, image, w);
   if (!o) return null;
   const flip = inputMirrored ? -1 : 1;
@@ -145,8 +150,8 @@ export function computeAlignment({ pose, dims, landmarks2D, width, height, input
 
   // perspective variant
   const f = (height / 2) / Math.tan((fovY * Math.PI / 180) / 2);
-  let persp = fitPerspective(model, image, w, f, width / 2, height / 2);
-  if (!persp || !(persp.T[2] < -0.3)) {
+  let persp = nFit >= 3 ? fitPerspective(model, image, w, f, width / 2, height / 2) : null;
+  if (!persp || !(persp.T[2] < -0.1)) {
     // fall back to the weak-perspective equivalent: depth = f/s
     const D = f / o.s;
     persp = { T: [(o.tx - width / 2) / o.s, -(o.ty - height / 2) / o.s, -D] };
@@ -160,6 +165,7 @@ export function computeAlignment({ pose, dims, landmarks2D, width, height, input
     width, height, flipX: inputMirrored,
     ortho, matrix, matrixWithRoot, perspective,
     rootQuaternion: pose.root?.quaternion?.slice() ?? [0, 0, 0, 1],
+    nFit,
     valid: Number.isFinite(o.s) && o.s > 0,
   };
 }
