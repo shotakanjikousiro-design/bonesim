@@ -10,6 +10,7 @@ network access**.
 | `models/pose_landmarker_full.task` | Google MediaPipe Pose Landmarker (BlazePose GHUM 3D, full), float16 | Apache-2.0 |
 | `models/pose_landmarker_lite.task` | Google MediaPipe Pose Landmarker (lite), float16 — for phones | Apache-2.0 |
 | `models/hand_landmarker.task` | Google MediaPipe Hand Landmarker, float16 | Apache-2.0 |
+| `models/face_landmarker.task` | Google MediaPipe Face Landmarker (face mesh 478 points + blendshapes), float16 — head fit and mouth opening | Apache-2.0 |
 | `LICENSE` | Apache License 2.0 text from github.com/google-ai-edge/mediapipe | — |
 
 Copyright Google LLC. The models are Google's MediaPipe models, published under
@@ -28,6 +29,13 @@ redistribute the official files unchanged:
 | `pose_landmarker_full.task` | `expo-mediapipe-pose@0.3.0` `assets/` | `5134a3aa…a839011b1` |
 | `pose_landmarker_lite.task` | `pose-landmarker-react-native@0.1.0` `android/src/main/assets/models/` | `59929e1d…a690d574a` |
 | `hand_landmarker.task` | `@beautinique/frontend-tryon-assets@1.0.2` `models/` (NOTICE: "copied as downloaded, bytes not changed", Apache-2.0) | `fbc2a300…bcf3607cde1` |
+| `face_landmarker.task` | GitHub `torinmb/mediapipe-touchdesigner` (`src/mediapipe/models/face_landmark_detection/`, Git LFS) | `64184e22…6544e0bc9ff` (3,758,596 bytes) |
+
+The face model's sha256 is the same in the Git LFS pointers / checksum files of several unrelated
+repositories that redistribute the official file (`torinmb/mediapipe-touchdesigner`,
+`mangelajo/flossy`, `njmill/tobii-linux`, `yousefelkilany/Word-level-Arabic-Sign-language`, …).
+Its canonical face mesh (`geometry_pipeline_metadata_landmarks.binarypb`) is what
+`tools/build_face_model.py` registers to the skull to produce `src/tracking/faceModel.js`.
 
 Verification: a `.task` file is a zip of TFLite models. The inner
 `pose_detector.tflite` / `pose_landmarks_detector.tflite` are byte-identical

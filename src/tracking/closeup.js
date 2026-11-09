@@ -13,7 +13,8 @@
 //  metres) of angles.js / alignment.js.
 // =====================================================================
 import { fitPerspective } from './alignment.js';
-import { apply, quatToMat, matToQuat } from './math3.js';
+import { apply, quatToMat, matToQuat, mul, transpose, axisAngle, normalize, cross, sub } from './math3.js';
+import { FACE_ANCHORS, FACE_TO_SKULL, FACE_DEPTH_SCALE } from './faceModel.js';
 
 /** a landmark counts as "seen" if visible enough AND inside the image (small margin) */
 export function landmarkOk(l, minVis = 0.6, margin = 0.01) {
@@ -31,9 +32,10 @@ export const FRAMINGS = {
  * Classify the framing of one frame.
  * @param lm2d   33 normalized pose landmarks (un-mirrored) or null
  * @param hands  [{landmarks2D: 21 normalized}] (any side) or []
+ * @param hasFace the face tracker (FaceLandmarker) has a face
  * @returns one of FRAMINGS' keys
  */
-export function classifyFraming(lm2d, hands = []) {
+export function classifyFraming(lm2d, hands = [], hasFace = false) {
   const ok = (i) => landmarkOk(lm2d?.[i]);
   const shoulders = ok(11) && ok(12);
   const hips = ok(23) && ok(24);
@@ -49,11 +51,13 @@ export function classifyFraming(lm2d, hands = []) {
     for (const p of inside) { x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); y0 = Math.min(y0, p.y); y1 = Math.max(y1, p.y); }
     handSize = Math.max(handSize, Math.hypot(x1 - x0, y1 - y0));
   }
-  if (handSize > 0.45 || (handSize > 0 && !shoulders && !face)) return 'hand';
+  // a hand alone → 'hand'. With a face / shoulders in view the framing describes the body and the
+  // hand bones are simply drawn on top (face and hand are shown together).
+  if (handSize > 0 && !shoulders && !face && !hasFace) return 'hand';
   if (shoulders && hips && legs) return 'full';
   if (shoulders && hips) return 'upper';
   if (shoulders) return 'headShoulders';
-  if (face) return 'face';
+  if (face || hasFace) return 'face';
   return 'none';
 }
 
@@ -172,4 +176,76 @@ export function createQuatSmoother(alpha = 0.5) {
 export function defaultFovY(width, height, longSideFov = 70) {
   const f = (Math.max(width, height) / 2) / Math.tan((longSideFov * Math.PI / 180) / 2);
   return 2 * Math.atan((height / 2) / f) * 180 / Math.PI;
+}
+
+// ---------------------------------------------------------------------
+//  Head from the FACE tracker (MediaPipe FaceLandmarker, 478 landmarks):
+//  far better constrained than the 7 face points of the pose model.
+// ---------------------------------------------------------------------
+const FACE_IDS = Object.keys(FACE_ANCHORS).map(Number);
+const FACE_PTS = FACE_IDS.map((i) => FACE_ANCHORS[i]);
+const SKULL_FROM_FACE_T = transpose(FACE_TO_SKULL);
+
+/** rotation (row-major 3×3) of the canonical face from FaceLandmarker's 4×4 facial transformation matrix (column-major) */
+export function faceMatrixRotation(m) {
+  if (!m || m.length < 16) return null;
+  const c = [0, 1, 2].map((j) => normalize([m[4 * j], m[4 * j + 1], m[4 * j + 2]]));
+  if (c.some((v) => !Number.isFinite(v[0]) || (v[0] === 0 && v[1] === 0 && v[2] === 0))) return null;
+  return [c[0][0], c[1][0], c[2][0], c[0][1], c[1][1], c[2][1], c[0][2], c[1][2], c[2][2]];
+}
+/** fallback orientation of the canonical face from the landmarks' own 3-D (x, y image; z ≈ image-width units) */
+function faceRotationFromLandmarks(L, width, height) {
+  const P = (i) => [L[i].x * width, -L[i].y * height, -(L[i].z || 0) * width];
+  const x = normalize(sub(P(263), P(33))); const up = sub(P(10), P(152));
+  const z = normalize(cross(x, up)); const y = cross(z, x);
+  if (!(Math.hypot(...z) > 0.5)) return null;
+  return [x[0], y[0], z[0], x[1], y[1], z[1], x[2], y[2], z[2]];
+}
+
+/**
+ * Fit the skull to FaceLandmarker landmarks: orientation from the facial transformation matrix
+ * (or the landmarks' 3-D), refined together with the position by the 2-D re-projection error of
+ * FACE_ANCHORS (expression-stable points: forehead, eye corners, nose, cheekbones).
+ * @param face {landmarks: 478 normalized (un-mirrored), matrix?: 16 numbers column-major}
+ * @returns {ao, R, quaternion, rmsPx, n, depthScale} (camera frame) or null
+ */
+export function fitHeadFromFace(face, width, height, f) {
+  const L = face?.landmarks; if (!L || L.length < 468) return null;
+  const Rf = faceMatrixRotation(face.matrix) || faceRotationFromLandmarks(L, width, height); if (!Rf) return null;
+  const img = [], pts = [], w = [];
+  for (let k = 0; k < FACE_IDS.length; k++) {
+    const l = L[FACE_IDS[k]]; if (!l || !Number.isFinite(l.x) || !Number.isFinite(l.y)) continue;
+    img.push([l.x * width, l.y * height]); pts.push(FACE_PTS[k]); w.push(1);
+  }
+  if (pts.length < 12) return null;
+  const solve = (R) => {
+    const m = pts.map((a) => apply(R, a));
+    const p = fitPerspective(m, img, w, f, width / 2, height / 2);
+    if (!p || !(p.T[2] < -0.05)) return null;
+    let e = 0;
+    for (let i = 0; i < m.length; i++) {
+      const D = -(m[i][2] + p.T[2]); if (!(D > 0.01)) return null;
+      e += (width / 2 + f * (m[i][0] + p.T[0]) / D - img[i][0]) ** 2 + (height / 2 - f * (m[i][1] + p.T[1]) / D - img[i][1]) ** 2;
+    }
+    return { T: p.T, e: e / m.length, R };
+  };
+  let best = solve(mul(Rf, SKULL_FROM_FACE_T)); if (!best) return null;
+  const AX = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+  for (const step of [4, 2, 1, 0.5]) {
+    for (let pass = 0; pass < 2; pass++) {
+      let improved = false;
+      for (const ax of AX) for (const sg of [1, -1]) {
+        const r = solve(mul(axisAngle(ax, sg * step), best.R));
+        if (r && r.e < best.e * 0.995) { best = r; improved = true; }
+      }
+      if (!improved) break;
+    }
+  }
+  return { ao: best.T, R: best.R, quaternion: matToQuat(best.R), rmsPx: Math.sqrt(best.e), n: pts.length, depthScale: FACE_DEPTH_SCALE };
+}
+
+/** mouth opening (mandible rotation, degrees) from the FaceLandmarker "jawOpen" blendshape (0..1) */
+export function jawAngleFromBlendshape(jawOpen, maxDeg = 30) {
+  if (!Number.isFinite(jawOpen)) return 0;
+  return maxDeg * Math.min(1, Math.max(0, (jawOpen - 0.04) / 0.66));
 }

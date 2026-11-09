@@ -16,7 +16,7 @@
 - ブラウザ（PC/スマホ）で動く ES Modules 構成。ビルド不要。`three` を `vendor/` に同梱、importmap で読み込み。
 - 起動: Windows では `start.bat`（Python の http.server）→ `http://localhost:8000`
 - 骨モデル: BodyParts3D（© DBCLS, CC BY-SA 2.1 JP）→ GLB
-- 追跡: MediaPipe Tasks Vision（Pose Landmarker + Hand Landmarker）
+- 追跡: MediaPipe Tasks Vision（Pose Landmarker + Hand Landmarker + Face Landmarker）。顔の追跡で頭蓋を顔に合わせ、jawOpen ブレンドシェイプで下顎（顎関節）を動かす。解析したフレームそのものを `<canvas id="camFrame">` に表示して、映像と骨のずれ（遅延）をなくす。
 
 ## ディレクトリ
 ```

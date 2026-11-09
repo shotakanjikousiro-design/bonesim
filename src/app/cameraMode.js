@@ -25,15 +25,22 @@ import { FRAMINGS, landmarkOk } from '../tracking/closeup.js';
 const LEG_SEGS = ['femur', 'patella', 'tibia', 'talus', 'foot'];
 const ARM_DISTAL = ['ulna', 'radius', 'carpalsProximal', 'hand', 'thumbMeta', 'thumbProx', 'thumbDist',
   ...['index', 'middle', 'ring', 'little'].flatMap((f) => [`${f}Prox`, `${f}Mid`, `${f}Dist`])];
-function hiddenForFraming(framing, res, rigOrder) {
+const HAND_SEGS = ARM_DISTAL.filter((b) => b !== 'ulna' && b !== 'radius');
+/**
+ * @param handsShown {left?: {forearm: bool}, right?: …} hands drawn on their own landmarks
+ *        (forearm: true = the forearm follows the hand because the arm itself is not tracked)
+ */
+function hiddenForFraming(framing, res, rigOrder, handsShown = {}) {
   const all = rigOrder.map((s) => s.id);
   const lm = res.landmarks2D?.normalized;
   const ok = (i) => landmarkOk(lm?.[i], 0.5, 0.02);
-  if (framing === 'face') return all.filter((id) => !/^(skull|C\d)$/.test(id));
-  if (framing === 'hand') {
-    const sides = new Set((res.hands || []).filter((h) => h.cameraPoints).map((h) => (h.side === 'left' ? 'L' : 'R')));
-    return all.filter((id) => { const m = id.match(/^(.*)_([LR])$/); return !(m && sides.has(m[2]) && ARM_DISTAL.includes(m[1])); });
+  const keep = new Set();
+  for (const [side, h] of Object.entries(handsShown)) {
+    const x = side === 'left' ? 'L' : 'R';
+    for (const b of (h.forearm ? ARM_DISTAL : HAND_SEGS)) keep.add(`${b}_${x}`);
   }
+  if (framing === 'face') return all.filter((id) => !/^(skull|C\d)$/.test(id) && !keep.has(id));
+  if (framing === 'hand') return all.filter((id) => !keep.has(id));
   const hide = [];
   if (framing === 'headShoulders') {
     hide.push('pelvis', 'L5', 'L4', 'L3', 'L2', 'L1');
@@ -41,13 +48,13 @@ function hiddenForFraming(framing, res, rigOrder) {
   }
   if (framing === 'headShoulders' || framing === 'upper') {
     for (const [x, el, wr] of [['L', 13, 15], ['R', 14, 16]]) {
-      const handSeen = (res.hands || []).some((h) => h.side === (x === 'L' ? 'left' : 'right'));
+      const handSeen = (res.hands || []).some((h) => h.matched !== false && h.side === (x === 'L' ? 'left' : 'right'));
       if (!ok(el)) hide.push(...ARM_DISTAL.map((b) => `${b}_${x}`));
-      else if (!ok(wr) && !handSeen) hide.push(...ARM_DISTAL.filter((b) => !['ulna', 'radius'].includes(b)).map((b) => `${b}_${x}`));
+      else if (!ok(wr) && !handSeen) hide.push(...HAND_SEGS.map((b) => `${b}_${x}`));
     }
     if (framing === 'upper') for (const [x, kn] of [['L', 25], ['R', 26]]) if (!ok(kn)) hide.push(...LEG_SEGS.filter((b) => b !== 'femur').map((b) => `${b}_${x}`));
   }
-  return hide;
+  return hide.filter((id) => !keep.has(id));
 }
 
 const CAL_KEY = 'bonesim.calibration.v1';
@@ -64,6 +71,7 @@ export function createCameraMode({ renderer, scene, rig, viewport, video, simCam
   let fileUrl = null; // video-file source (blob: URL)
   const live = () => stream || fileUrl;
   let demo = null; const demoCanvas = document.getElementById('demo2d');
+  const frameCanvas = document.getElementById('camFrame'); // the analysed frame (shown instead of the live <video>)
   let last = null; let dimsKey = ''; let lastScaleT = 0;
   let side3D = false, mirror = true;
   const rects = { video: null, view3D: null };
@@ -87,11 +95,12 @@ export function createCameraMode({ renderer, scene, rig, viewport, video, simCam
   $('camSide3D').addEventListener('change', (e) => { side3D = e.target.checked; if (side3D) ui.setView('front', true); });
   $('camDim').addEventListener('change', applyVideoClasses);
   $('camHands').addEventListener('change', (e) => tracker?.setOptions({ hands: e.target.checked }));
+  $('camFace').addEventListener('change', (e) => tracker?.setOptions({ face: e.target.checked }));
   $('camFade').addEventListener('change', (e) => { if (!e.target.checked) rig.setConfidence(null); });
   $('camModel').addEventListener('change', (e) => tracker?.setOptions({ modelVariant: e.target.value }).catch((err) => status(`モデル切替に失敗: ${err.message}`)));
   function applyVideoClasses() {
-    video.classList.toggle('mirror', mirror); demoCanvas.classList.toggle('mirror', mirror);
-    video.classList.toggle('dim', $('camDim').checked);
+    video.classList.toggle('mirror', mirror); demoCanvas.classList.toggle('mirror', mirror); frameCanvas.classList.toggle('mirror', mirror);
+    video.classList.toggle('dim', $('camDim').checked); frameCanvas.classList.toggle('dim', $('camDim').checked);
   }
   applyVideoClasses();
   showCalibInfo(loadCalibration());
@@ -139,7 +148,7 @@ export function createCameraMode({ renderer, scene, rig, viewport, video, simCam
         const { createTracker } = await import('../tracking/tracker.js');
         tracker = await createTracker({
           video, onResult,
-          options: { modelVariant: $('camModel').value, hands: $('camHands').checked, handsEvery: isMobile() ? 2 : 1, onStatus: (m) => status(m) },
+          options: { modelVariant: $('camModel').value, hands: $('camHands').checked, face: $('camFace').checked, useFace: $('camFace').checked, handsEvery: 1, adaptive: true, frameCanvas, onStatus: (m) => status(m) },
         });
         const c = loadCalibration(); if (c) tracker.setCalibration(c);
       }
@@ -160,7 +169,8 @@ export function createCameraMode({ renderer, scene, rig, viewport, video, simCam
     stopDemo();
     tracker?.stop();
     stream?.getTracks().forEach((t) => t.stop()); stream = null;
-    video.srcObject = null; closeFile(); video.style.display = 'none'; last = null;
+    video.srcObject = null; closeFile(); video.style.display = 'none'; frameCanvas.style.display = 'none'; last = null;
+    rig.setJaw(0);
     status('停止中');
   }
 
@@ -192,7 +202,7 @@ export function createCameraMode({ renderer, scene, rig, viewport, video, simCam
   // ---------- demo source: synthetic MediaPipe-format frames (src/tracking/synth.js) ----------
   async function startDemo() {
     if (starting) return;
-    tracker?.stop(); stream?.getTracks().forEach((t) => t.stop()); stream = null; video.srcObject = null; closeFile(); video.style.display = 'none';
+    tracker?.stop(); stream?.getTracks().forEach((t) => t.stop()); stream = null; video.srcObject = null; closeFile(); video.style.display = 'none'; frameCanvas.style.display = 'none';
     const [{ createPipeline }, { synthesizeFrame, makeRng }] = await Promise.all([import('../tracking/pipeline.js'), import('../tracking/synth.js')]);
     const c = loadCalibration();
     const pipeline = createPipeline({}); if (c) pipeline.setCalibration(c);
@@ -246,17 +256,24 @@ export function createCameraMode({ renderer, scene, rig, viewport, video, simCam
   // ---------- results ----------
   function onResult(res) {
     last = res;
+    if (!demo && tracker && frameCanvas.style.display !== 'block') frameCanvas.style.display = 'block'; // first analysed frame is in
     $('camFps').textContent = `${(res.fps ?? 0).toFixed(0)} fps`;
     const fr = FRAMINGS[res.framing]?.label;
     if (!res.detected) status('人物が見つかりません（全身・上半身・顔・手のいずれかが映るように）');
-    else status(`${fr ? `【${fr}】` : ''}${res.calibrated ? '' : '未キャリブレーション・'}${res.bodyDetected === false ? '手のみ' : `信頼度 ${(res.confidence * 100).toFixed(0)}%`}`);
+    else {
+      const parts = [];
+      if (res.head?.source === 'face') parts.push('顔');
+      const nh = (res.hands || []).filter((h) => h.cameraPoints).length; if (nh) parts.push(`手×${nh}`);
+      if (res.jaw && res.jaw.open > 3) parts.push(`開口 ${res.jaw.open.toFixed(0)}°`);
+      status(`${fr ? `【${fr}】` : ''}${res.bodyDetected === false ? '' : `信頼度 ${(res.confidence * 100).toFixed(0)}%`}${parts.length ? `　追跡: ${parts.join('・')}` : ''}`);
+    }
     if (res.dims) { // bone lengths may be auto-learned each frame → rescale at most every 0.5 s
       const k = Object.values(res.dims).map((v) => v.toFixed(3)).join(',');
       const now = performance.now();
       if (k !== dimsKey && (now - lastScaleT > 500 || !dimsKey)) { dimsKey = k; lastScaleT = now; rig.scaleToDims(res.dims); }
     }
     // ---- close-ups: perspective camera, head fitted to the face, hand bones on the hand landmarks ----
-    const framing = res.framing || 'full'; const al = res.alignment;
+    const framing = res.framing || 'full'; const al = res.alignment; let handsShown = {};
     if (framing === 'full' || framing === 'none') {
       view = { mode: 'ortho', T: new THREE.Vector3() };
       rig.setCloseup(null, { apply: false }); rig.setHiddenSegments(null);
@@ -265,18 +282,55 @@ export function createCameraMode({ renderer, scene, rig, viewport, video, simCam
       const T = new THREE.Vector3(); let ok = true;
       rig.setCloseup(null, { apply: false });
       rig.setPose(res.pose || {}, { useRoot: true });
+      const head = res.head; const lmN = res.landmarks2D?.normalized; const okLm = (i) => landmarkOk(lmN?.[i], 0.5, 0.02);
+      // the face fit sees the skull "as worn by the face" (depthScale × the true distance): the body hangs at the true distance
+      const aoTrue = head ? new THREE.Vector3().fromArray(head.ao).multiplyScalar(1 / (head.depthScale || 1)) : null;
       if (framing === 'hand') { /* hand landmarks are already in the camera frame */ }
-      else if (al?.valid && al.nFit >= 2) T.fromArray(al.perspective.position);
-      else if (res.head) T.fromArray(res.head.ao).sub(rig.rootLocalPosition('skull'));
+      else if (head?.source === 'face' && (framing === 'face' || framing === 'headShoulders')) {
+        // Close-up with a tracked face: the body is hung under the head. Its distance comes from the
+        // shoulder width on screen when that agrees with the face (0.6–1.5 × the head's distance);
+        // if the shoulders are occluded / guessed (wildly different distance) the body keeps the
+        // head's distance and is only slid a limited amount toward the shoulder landmarks.
+        T.copy(aoTrue).sub(rig.rootLocalPosition('skull'));
+        if (framing === 'headShoulders' && okLm(11) && okLm(12)) {
+          const px = res.landmarks2D.pixels, W = res.landmarks2D.width, H = res.landmarks2D.height;
+          const f = (H / 2) / Math.tan(((res.camera?.fovY ?? 55) * Math.PI) / 360);
+          const pL = rig.rootLocalPosition('humerus_L'), pR = rig.rootLocalPosition('humerus_R');
+          const pS = pL.clone().add(pR).multiplyScalar(0.5);
+          let D = -(T.z + pS.z);
+          const dpx = Math.hypot(px[11][0] - px[12][0], px[11][1] - px[12][1]);
+          const Dsh = dpx > 4 ? f * Math.hypot(pL.x - pR.x, pL.y - pR.y) / dpx : 0;
+          const agree = D > 0.05 && Dsh / D > 0.6 && Dsh / D < 1.5;
+          if (agree) { D = Dsh; T.z = -D - pS.z; }
+          if (D > 0.05) {
+            const d = new THREE.Vector2(((px[11][0] + px[12][0]) / 2 - W / 2) * D / f - pS.x - T.x, -((px[11][1] + px[12][1]) / 2 - H / 2) * D / f - pS.y - T.y);
+            if (!agree && d.length() > 0.10) d.setLength(0.10);
+            T.x += d.x; T.y += d.y;
+          }
+        }
+      } else if (al?.valid && al.nFit >= 2) T.fromArray(al.perspective.position);
+      else if (head) T.copy(aoTrue).sub(rig.rootLocalPosition('skull'));
       else ok = false;
-      const cu = {};
-      if (res.head && framing !== 'hand') cu.head = { ao: new THREE.Vector3().fromArray(res.head.ao).sub(T).toArray(), quaternion: res.head.quaternion };
-      if (framing === 'hand') { cu.hands = {}; for (const h of res.hands || []) if (h.cameraPoints) cu.hands[h.side] = h.cameraPoints.map((p) => [p[0] - T.x, p[1] - T.y, p[2] - T.z]); }
+      const cu = {}; handsShown = {};
+      if (head && framing !== 'hand') cu.head = { ao: new THREE.Vector3().fromArray(head.ao).sub(T).toArray(), quaternion: head.quaternion };
+      // hands: always drawn on their own landmarks (also next to a face / in front of the body)
+      for (const h of res.hands || []) {
+        if (!h.cameraPoints) continue;
+        (cu.hands ||= {})[h.side] = h.cameraPoints.map((p) => [p[0] - T.x, p[1] - T.y, p[2] - T.z]);
+        // the forearm follows the hand unless the arm itself is tracked (elbow in view, hand tied to the pose wrist)
+        const fore = !(framing !== 'hand' && h.matched && okLm(h.side === 'left' ? 13 : 14));
+        (cu.handForearm ||= {})[h.side] = fore; handsShown[h.side] = { forearm: fore };
+      }
+      if (framing === 'hand' && !cu.hands) ok = false;
       rig.setCloseup(cu, { apply: true });
-      rig.setHiddenSegments(hiddenForFraming(framing, res, rig.order));
+      rig.setHiddenSegments(hiddenForFraming(framing, res, rig.order, handsShown));
       view = { mode: ok ? 'persp' : 'none', T, fovY: res.camera?.fovY ?? al?.perspective?.fovY ?? 55, framing };
     }
-    rig.setConfidence($('camFade').checked ? res.pose?.confidence : null, 0.4);
+    rig.setJaw(res.jaw ? res.jaw.open : 0);
+    const exempt = new Set();
+    for (const [side, h] of Object.entries(handsShown)) for (const b of (h.forearm ? ARM_DISTAL : HAND_SEGS)) exempt.add(`${b}_${side === 'left' ? 'L' : 'R'}`);
+    rig.setConfidence($('camFade').checked ? res.pose?.confidence : null, 0.4, exempt);
+
   }
 
   // ---------- layout & rendering ----------
@@ -291,7 +345,7 @@ export function createCameraMode({ renderer, scene, rig, viewport, video, simCam
     const k = Math.min(area.w / W, area.h / H);
     const vr = { x: area.x + (area.w - W * k) / 2, y: area.y + (area.h - H * k) / 2, w: W * k, h: H * k, W, H };
     const box = { left: `${vr.x}px`, top: `${vr.y}px`, width: `${vr.w}px`, height: `${vr.h}px` };
-    Object.assign(video.style, box); Object.assign(demoCanvas.style, box);
+    Object.assign(video.style, box); Object.assign(demoCanvas.style, box); Object.assign(frameCanvas.style, box);
     rects.video = vr; rects.view3D = a3;
     return { Cw, Ch };
   }
@@ -350,7 +404,7 @@ export function createCameraMode({ renderer, scene, rig, viewport, video, simCam
       if (!live() && !demo) status('「開始」を押してください（カメラがなければ入力を「デモ」に）');
     },
     exit() {
-      active = false; stop(); $('camHud').hidden = true; rig.setConfidence(null);
+      active = false; stop(); $('camHud').hidden = true; rig.setConfidence(null); rig.setJaw(0);
       rig.setCloseup(null, { apply: false }); rig.setHiddenSegments(null); view = { mode: 'ortho', T: new THREE.Vector3() };
       rig.root.matrixAutoUpdate = true; rig.setUseRoot(false); dimsKey = '';
       simCamera.aspect = viewport.clientWidth / viewport.clientHeight; simCamera.updateProjectionMatrix();

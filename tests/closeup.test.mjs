@@ -10,7 +10,9 @@ import { createRig } from '../src/rig/anatomicalRig.js';
 import { anatomicalPose, stickFK } from '../src/shared/conventions.js';
 import { synthesizeFrame } from '../src/tracking/synth.js';
 import { createPipeline } from '../src/tracking/pipeline.js';
-import { classifyFraming, defaultFovY, HEAD_MODEL } from '../src/tracking/closeup.js';
+import { classifyFraming, defaultFovY, HEAD_MODEL, fitHeadFromFace, jawAngleFromBlendshape } from '../src/tracking/closeup.js';
+import { FACE_ANCHORS, FACE_TO_SKULL, FACE_DEPTH_SCALE } from '../src/tracking/faceModel.js';
+import { mul, apply, axisAngle, rotationAngleBetween, mulN } from '../src/tracking/math3.js';
 import { computeAlignment } from '../src/tracking/alignment.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -134,7 +136,8 @@ function faceError(lm) {
   const center = [0.5 - hc.x * f / (W * D), 0.5 + hc.y * f / (H * D)];
   const { res } = run(pose, { camDistance: D, center, handNoise: 0.002, pixelNoise: 0.5 });
   const h = res.hands.find((x) => x.side === 'right');
-  check('framing = 手 (hand) for a hand near the camera', res.framing === 'hand', res.framing);
+  // a face is in view behind the hand → the framing stays on the body and the hand is drawn in addition
+  check('hand near the camera with the face in view: framing is not hand-only', res.framing !== 'hand' && res.framing !== 'none', res.framing);
   check('hand placed in the camera frame', !!h?.cameraPoints, h ? `wrist depth ${(-h.cameraPoints[0][2]).toFixed(2)} m` : 'none');
   if (h?.cameraPoints) {
     placeRig(res, { useHead: false, useHands: true });
@@ -164,6 +167,66 @@ function faceError(lm) {
   const pose = anatomicalPose(); pose.left.shoulder.elevation = 40;
   const { res } = run(pose, { width: 640, height: 480, camDistance: 3.0, center: [0.5, 0.52] });
   check('full body: framing = 全身 and dims learning allowed', res.framing === 'full', `${res.framing}, dims ${res.dimsSource}`);
+}
+
+// ---------------- 4. face tracker: head from FaceLandmarker landmarks, mouth, hand + face together ----------------
+/** synthetic FaceLandmarker output for a skull at `ao` with orientation R (camera frame) */
+function synthFace(R, ao, { matrixError = null, jawOpen = 0 } = {}) {
+  const lm = Array.from({ length: 478 }, () => ({ x: 0.5, y: 0.5, z: 0 }));
+  for (const [i, a] of Object.entries(FACE_ANCHORS)) {
+    const p = apply(R, a); const X = p[0] + ao[0], Y = p[1] + ao[1], D = -(p[2] + ao[2]);
+    lm[i] = { x: (W / 2 + f * X / D) / W, y: (H / 2 - f * Y / D) / H, z: 0 };
+  }
+  let Rf = mul(R, FACE_TO_SKULL); if (matrixError) Rf = mul(matrixError, Rf);
+  const m = [Rf[0], Rf[3], Rf[6], 0, Rf[1], Rf[4], Rf[7], 0, Rf[2], Rf[5], Rf[8], 0, 0, 0, -40, 1];
+  return { landmarks: lm, matrix: m, jawOpen };
+}
+{
+  const R = mulN(axisAngle([0, 1, 0], 22), axisAngle([1, 0, 0], -12), axisAngle([0, 0, 1], 8)); const ao = [0.03, 0.05, -0.38];
+  const fit = fitHeadFromFace(synthFace(R, ao), W, H, f);
+  const dPos = fit ? Math.hypot(fit.ao[0] - ao[0], fit.ao[1] - ao[1], fit.ao[2] - ao[2]) : 9;
+  check('face fit recovers the skull position (< 2 mm)', !!fit && dPos < 0.002, `${(dPos * 1000).toFixed(2)} mm, rms ${fit?.rmsPx.toFixed(2)} px, ${fit?.n} anchors`);
+  check('face fit recovers the head orientation (< 0.5°)', !!fit && rotationAngleBetween(fit.R, R) < 0.5, `${fit ? rotationAngleBetween(fit.R, R).toFixed(2) : '-'}°`);
+  const fit2 = fitHeadFromFace(synthFace(R, ao, { matrixError: axisAngle([0.3, 1, 0.2], 7) }), W, H, f);
+  check('a 7° error in the facial matrix is corrected by the 2-D refinement (< 1.5°)', !!fit2 && rotationAngleBetween(fit2.R, R) < 1.5, `${fit2 ? rotationAngleBetween(fit2.R, R).toFixed(2) : '-'}°`);
+  check('jawOpen blendshape → opening angle (0 → 0°, 0.7 → 30°, monotonic)', jawAngleFromBlendshape(0.02) === 0 && Math.abs(jawAngleFromBlendshape(0.7) - 30) < 1e-9 && jawAngleFromBlendshape(0.3) > jawAngleFromBlendshape(0.2));
+
+  // face only (no body detected): the skull is still shown, with the mouth opening
+  const pl = createPipeline({}); let res;
+  for (let i = 0; i < 30; i++) res = pl.process({ t: i * 33, width: W, height: H, landmarks: null, worldLandmarks: null, hands: [], face: synthFace(R, ao, { jawOpen: 0.7 }) });
+  check('face without a body: framing = 顔, head from the face tracker', res.framing === 'face' && res.head?.source === 'face' && res.detected, `${res.framing}, ${res.head?.source}`);
+  check('mouth opening reaches the rig value (≈ 30°)', Math.abs((res.jaw?.open ?? 0) - 30) < 1, `${res.jaw?.open?.toFixed(1)}°`);
+  const dAo = Math.hypot(res.head.ao[0] - ao[0], res.head.ao[1] - ao[1], res.head.ao[2] - ao[2]);
+  check('smoothed head position stays on the face (< 2 mm, static)', dAo < 0.002, `${(dAo * 1000).toFixed(2)} mm`);
+
+  // jaw in the rig: the chin drops, the condyles glide forward
+  const mand = rig.pickables().find((m) => m.userData.nodeName === 'mandible');
+  const menton = new THREE.Vector3(...rigData.landmarks.menton), cond = new THREE.Vector3(...rigData.joints.temporomandibular.center);
+  rig.setJaw(30);
+  const m30 = menton.clone().applyMatrix4(mand.matrix), c30 = cond.clone().applyMatrix4(mand.matrix);
+  check('jaw 30°: chin drops 2.5–5 cm and moves back', menton.y - m30.y > 0.025 && menton.y - m30.y < 0.05, `${((menton.y - m30.y) * 100).toFixed(1)} cm down`);
+  check('jaw 30°: condyles glide forward ≈ 9 mm (TMJ translation)', c30.z - cond.z > 0.006 && c30.distanceTo(cond) < 0.011, `${(c30.distanceTo(cond) * 1000).toFixed(1)} mm`);
+  rig.setJaw(0);
+  check('jaw 0°: mandible back at rest', menton.clone().applyMatrix4(mand.matrix).distanceTo(menton) < 1e-6);
+}
+{
+  // selfie (head & shoulders) + a hand that is NOT at a pose wrist (arm outside the picture): both are shown
+  const pose = anatomicalPose();
+  const src = anatomicalPose(); src.right.shoulder = { elevation: 90, plane: 90, axialRotation: 0 };
+  const hf = synthesizeFrame(src, { width: W, height: H, fovY: FOV, camDistance: 0.6, center: [0.5, 1.0] }).hands?.find((h) => h.handedness?.[0]?.categoryName);
+  const pl = createPipeline({}); let res;
+  for (let i = 0; i < 40; i++) {
+    const fr = synthesizeFrame(pose, { width: W, height: H, fovY: FOV, camDistance: 0.55, center: [0.5, 1.25] });
+    faceFromHeadModel(fr, pose, { camDistance: 0.55, center: [0.5, 1.25] });
+    // hand of another synthetic frame, moved to the upper-left corner of the picture
+    const x0 = hf.landmarks[0].x, y0 = hf.landmarks[0].y;
+    const hand = { ...hf, landmarks: hf.landmarks.map((l) => ({ ...l, x: 0.2 + (l.x - x0) * 0.5, y: 0.3 + (l.y - y0) * 0.5 })) };
+    res = pl.process({ t: i * 33, width: W, height: H, landmarks: fr.landmarks, worldLandmarks: fr.worldLandmarks, hands: [hand] });
+  }
+  const h = res.hands[0];
+  check('face + free hand: framing stays 顔・肩 / 顔', res.framing === 'headShoulders' || res.framing === 'face', res.framing);
+  check('free hand is kept (not tied to a pose wrist) and placed in the camera frame', !!h && h.matched === false && !!h.cameraPoints, h ? `side ${h.side}, depth ${h.cameraPoints ? (-h.cameraPoints[0][2]).toFixed(2) : '-'} m` : 'no hand');
+  check('head still fitted next to the hand', !!res.head, res.head ? `rms ${res.head.rmsPx.toFixed(1)} px` : 'none');
 }
 
 console.log(fails ? `\n${fails} FAILED` : '\nALL PASS');

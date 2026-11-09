@@ -57,7 +57,8 @@ def main():
         page.wait_for_timeout(40000)
         status = page.inner_text('#camStatus')
         info = page.evaluate("""() => { const r = window.bonesim.cam.last; if (!r) return null;
-            return { framing: r.framing, framingRaw: r.framingRaw, head: r.head && { ao: r.head.ao, rmsPx: r.head.rmsPx, n: r.head.n },
+            return { framing: r.framing, framingRaw: r.framingRaw, head: r.head && { ao: r.head.ao, rmsPx: r.head.rmsPx, n: r.head.n, source: r.head.source },
+                     jaw: r.jaw, hands: (r.hands || []).map((h) => ({ side: h.side, matched: h.matched, placed: !!h.cameraPoints })), fps: r.fps, inferenceMs: r.inferenceMs, staggered: r.staggered, faceModel: r.info && r.info.faceModel,
                      nFit: r.alignment && r.alignment.nFit, fovY: r.camera && r.camera.fovY, dims: r.dimsSource,
                      size: r.landmarks2D && [r.landmarks2D.width, r.landmarks2D.height] }; }""")
         page.screenshot(path=out)

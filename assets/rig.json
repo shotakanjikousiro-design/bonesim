@@ -3260,6 +3260,31 @@
     ]
    },
    "method": "sphere fit to articular head of proximal bone (r=5.8 mm, rms=0.29 mm); flexion toward palm/ulnar side (approximate thumb plane)"
+  },
+  "temporomandibular": {
+   "center": [
+    0.00023,
+    1.51068,
+    0.1039
+   ],
+   "axes": {
+    "opening": [
+     0.99999,
+     -0.00323,
+     -0.00335
+    ]
+   },
+   "condyle_L": [
+    0.04094,
+    1.51055,
+    0.10377
+   ],
+   "condyle_R": [
+    -0.04048,
+    1.51081,
+    0.10404
+   ],
+   "method": "condylar heads = top of the posterior ramus process of the mandible mesh; axis R→L condyle"
   }
  },
  "landmarks": {

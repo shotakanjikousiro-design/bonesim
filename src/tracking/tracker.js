@@ -1,5 +1,5 @@
 // =====================================================================
-//  tracker.js — webcam -> MediaPipe PoseLandmarker (+ HandLandmarker) ->
+//  tracker.js — webcam -> MediaPipe PoseLandmarker (+ HandLandmarker, FaceLandmarker) ->
 //  pipeline.js -> onResult({pose, confidence, landmarks2D, worldLandmarks,
 //  hands, alignment, fps, ...}).
 //
@@ -12,7 +12,7 @@
 //    tracker.start();  ...  await tracker.calibrate();  ...  tracker.dispose();
 // =====================================================================
 import './noTelemetry.js'; // must come first: blocks MediaPipe's usage-statistics upload
-import { FilesetResolver, PoseLandmarker, HandLandmarker } from '../../vendor/mediapipe/vision_bundle.mjs';
+import { FilesetResolver, PoseLandmarker, HandLandmarker, FaceLandmarker } from '../../vendor/mediapipe/vision_bundle.mjs';
 import { createPipeline } from './pipeline.js';
 import { loadBinary, isOwnFile } from '../shared/binAsset.js';
 
@@ -23,13 +23,17 @@ export const MODEL_SOURCES = {
   pose_full: [new URL('models/pose_landmarker_full.task', VENDOR).href, `${GCS}/pose_landmarker/pose_landmarker_full/float16/latest/pose_landmarker_full.task`],
   pose_heavy: [new URL('models/pose_landmarker_heavy.task', VENDOR).href, `${GCS}/pose_landmarker/pose_landmarker_heavy/float16/latest/pose_landmarker_heavy.task`],
   hand: [new URL('models/hand_landmarker.task', VENDOR).href, `${GCS}/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task`],
+  face: [new URL('models/face_landmarker.task', VENDOR).href, `${GCS}/face_landmarker/face_landmarker/float16/latest/face_landmarker.task`],
 };
 export const WASM_SOURCES = [new URL('wasm', VENDOR).href.replace(/\/$/, ''), 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.2/wasm'];
 
 export const DEFAULT_TRACKER_OPTIONS = {
   modelVariant: 'full',          // 'lite' (phones) | 'full' | 'heavy'
   hands: true,                   // run HandLandmarker (better pronation / wrist / fingers)
-  handsEvery: 1,                 // run hands every N frames (2 on slow phones)
+  handsEvery: 1,                 // run hands every N frames (fixed lower bound; see `adaptive`)
+  face: true,                    // run FaceLandmarker (head fitted to the face, mouth opening)
+  adaptive: true,                // when inference is slower than the camera, run hands / face on alternate frames
+  frameCanvas: null,             // <canvas>: every analysed frame is copied here, so picture and bones stay in sync
   delegate: 'GPU',               // 'GPU' with automatic CPU fallback, or 'CPU'
   autoDelegate: true,            // if GPU inference is pathologically slow (software GL), switch to CPU
   minPoseDetectionConfidence: 0.5, minPosePresenceConfidence: 0.5, minTrackingConfidence: 0.5,
@@ -100,9 +104,9 @@ export async function createTracker({ video, onResult, options = {} }) {
   const status = (m) => { o.onStatus?.(m); };
   const pipeline = createPipeline(options);
   const fileset = await getFileset(status);
-  const info = { poseModel: null, handModel: null, poseDelegate: null, handDelegate: null };
+  const info = { poseModel: null, handModel: null, faceModel: null, poseDelegate: null, handDelegate: null, faceDelegate: null };
 
-  let pose = null, hand = null;
+  let pose = null, hand = null, face = null;
   async function loadPose() {
     const key = `pose_${o.modelVariant}`;
     status(`loading ${key} …`);
@@ -125,7 +129,17 @@ export async function createTracker({ video, onResult, options = {} }) {
     hand?.close(); hand = task;
     Object.assign(info, { handModel: url, handDelegate: delegate });
   }
+  async function loadFace() {
+    const { url, buffer } = await fetchFirst(MODEL_SOURCES.face, status);
+    const { task, delegate } = await createWithFallback(FaceLandmarker, fileset, buffer, o.delegate, {
+      numFaces: 1, outputFaceBlendshapes: true, outputFacialTransformationMatrixes: true,
+      minFaceDetectionConfidence: 0.5, minFacePresenceConfidence: 0.5, minTrackingConfidence: 0.5,
+    }, status);
+    face?.close(); face = task;
+    Object.assign(info, { faceModel: url, faceDelegate: delegate });
+  }
   await loadPose();
+  if (o.face) { try { await loadFace(); } catch (e) { status(`face tracking disabled: ${e.message}`); o.face = false; } }
   if (o.hands) { try { await loadHand(); } catch (e) { status(`hands disabled: ${e.message}`); o.hands = false; } }
 
   // GPU sanity benchmark: some machines expose only a software WebGL; CPU (XNNPACK) is then much faster
@@ -140,11 +154,20 @@ export async function createTracker({ video, onResult, options = {} }) {
     if (med > 120) {
       status(`GPU inference slow (${med.toFixed(0)} ms/frame) — switching to CPU`);
       o.delegate = 'CPU';
-      loadPose().then(() => (o.hands ? loadHand() : null)).catch((e) => status(`CPU fallback failed: ${e.message}`));
+      loadPose().then(() => (o.hands ? loadHand() : null)).then(() => (o.face ? loadFace() : null)).catch((e) => status(`CPU fallback failed: ${e.message}`));
     }
   }
   let running = false, rafId = 0, vfcId = 0, lastTs = 0, lastVideoTime = -1, frameNo = 0;
-  let lastHands = null, fps = 0, lastFrameT = 0, busy = false;
+  let lastHands = null, lastFace = null, fps = 0, lastFrameT = 0, busy = false;
+  let costMs = 0, stagger = false; // adaptive scheduling of the hand / face models
+  const fctx = () => (o.frameCanvas ? (o.frameCanvas._ctx ||= o.frameCanvas.getContext('2d', { alpha: false })) : null);
+  /** FaceLandmarker result → {landmarks, matrix, jawOpen} */
+  function faceOf(fr) {
+    const lm = fr?.faceLandmarks?.[0]; if (!lm) return null;
+    const cats = fr.faceBlendshapes?.[0]?.categories; let jawOpen;
+    if (cats) for (const c of cats) if (c.categoryName === 'jawOpen') { jawOpen = c.score; break; }
+    return { landmarks: lm, matrix: fr.facialTransformationMatrixes?.[0]?.data ?? null, jawOpen };
+  }
   const hasVFC = 'requestVideoFrameCallback' in HTMLVideoElement.prototype;
   const schedule = () => {
     if (!running) return;
@@ -158,23 +181,41 @@ export async function createTracker({ video, onResult, options = {} }) {
     busy = true;
     try {
       let ts = performance.now(); if (ts <= lastTs) ts = lastTs + 1; lastTs = ts;
+      // Freeze the frame: all models analyse the same picture, and that picture is what is shown
+      // under the bones (a live <video> would already be a few frames ahead of the overlay).
+      const W = video.videoWidth, H = video.videoHeight; let src = video;
+      const g = fctx();
+      if (g) {
+        const c = o.frameCanvas; if (c.width !== W || c.height !== H) { c.width = W; c.height = H; }
+        g.drawImage(video, 0, 0, W, H); src = c;
+      }
       const t0 = performance.now();
-      const pr = pose.detectForVideo(video, ts);
+      const pr = pose.detectForVideo(src, ts);
       benchmark(performance.now() - t0);
+      const every = Math.max(1, o.handsEvery);
+      const runHand = o.hands && hand && (frameNo % every === 0) && !(stagger && every === 1 && o.face && face && frameNo % 2 === 1);
+      const runFace = o.face && face && !(stagger && o.hands && hand && frameNo % 2 === 0);
       let handsRes = lastHands;
-      if (o.hands && hand && (frameNo % Math.max(1, o.handsEvery) === 0)) {
-        const hr = hand.detectForVideo(video, ts);
+      if (runHand) {
+        const hr = hand.detectForVideo(src, ts);
         handsRes = (hr.landmarks || []).map((lm, i) => ({ landmarks: lm, worldLandmarks: hr.worldLandmarks?.[i], handedness: hr.handedness?.[i] ?? hr.handednesses?.[i] }));
         lastHands = handsRes;
       } else if (!o.hands) handsRes = null;
+      let faceRes = lastFace;
+      if (runFace) { faceRes = faceOf(face.detectForVideo(src, ts)); lastFace = faceRes; } else if (!o.face) faceRes = null;
       frameNo++;
+      if (o.adaptive) { // slower than ≈ 24 fps → alternate hands / face; fast again → both every frame
+        const ms = (performance.now() - t0) * (stagger && runHand !== runFace ? 1.35 : 1);
+        costMs = costMs ? costMs + (ms - costMs) * 0.1 : ms;
+        if (frameNo > 15) stagger = costMs > 42 ? true : costMs < 28 ? false : stagger;
+      } else stagger = false;
       const lm = pr.landmarks?.[0], wl = pr.worldLandmarks?.[0];
       // world landmarks carry no reliable visibility in some builds: copy from image landmarks
       const world = wl && lm ? wl.map((w, i) => ({ x: w.x, y: w.y, z: w.z, visibility: lm[i]?.visibility ?? w.visibility, presence: lm[i]?.presence ?? w.presence })) : null;
-      const res = pipeline.process({ t: ts, width: video.videoWidth, height: video.videoHeight, landmarks: lm || null, worldLandmarks: world, hands: handsRes });
+      const res = pipeline.process({ t: ts, width: W, height: H, landmarks: lm || null, worldLandmarks: world, hands: handsRes, face: faceRes });
       const dt = lastFrameT ? (ts - lastFrameT) / 1000 : 0; lastFrameT = ts;
       if (dt > 0) fps = fps ? fps + (1 / dt - fps) * 0.1 : 1 / dt;
-      res.fps = fps; res.info = info; res.calibrating = pipeline.calibrating;
+      res.fps = fps; res.info = info; res.calibrating = pipeline.calibrating; res.inferenceMs = costMs; res.staggered = stagger;
       onResult?.(res);
     } catch (e) {
       status(`tracking error: ${e.message ?? e}`);
@@ -195,10 +236,13 @@ export async function createTracker({ video, onResult, options = {} }) {
       if (opts.modelVariant && opts.modelVariant !== prev.modelVariant || opts.delegate && opts.delegate !== prev.delegate) await loadPose();
       if (o.hands && !hand) { try { await loadHand(); } catch (e) { status(`hands unavailable: ${e.message}`); o.hands = false; } }
       if (!o.hands) lastHands = null;
+      if (o.face && !face) { try { await loadFace(); } catch (e) { status(`face tracking unavailable: ${e.message}`); o.face = false; } }
+      if (!o.face) lastFace = null;
+      if (opts.face !== undefined) pipeline.setOptions({ useFace: !!o.face });
     },
     get options() { return { ...o, ...pipeline.options }; },
     get info() { return info; },
     pipeline,
-    dispose() { stop(); pose?.close(); hand?.close(); pose = hand = null; },
+    dispose() { stop(); pose?.close(); hand?.close(); face?.close(); pose = hand = face = null; },
   };
 }

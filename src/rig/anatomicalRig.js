@@ -618,7 +618,9 @@ export async function createRig({ scene, glbUrl, rigUrl, gltf, rigData, skin = t
         setRootLocalMatrix(seg, M);
       };
       const b0 = sim.t;
-      for (const id of [`ulna_${x}`, `radius_${x}`, `carpalsProximal_${x}`, `hand_${x}`]) place(id, A0, b0);
+      // forearm: follows the hand only when the arm itself is not tracked (cu.handForearm[side] === false keeps the body pose)
+      const fore = cu.handForearm?.[side] !== false;
+      for (const id of [...(fore ? [`ulna_${x}`, `radius_${x}`] : []), `carpalsProximal_${x}`, `hand_${x}`]) place(id, A0, b0);
       const tip = (n) => V3(R.landmarks[`${n}Tip_${x}`]);
       const bones = [
         ['thumbMeta', jc('cmc1'), jc('mcp1'), 1, 2], ['thumbProx', jc('mcp1'), jc('ip1'), 2, 3], ['thumbDist', jc('ip1'), tip('thumb'), 3, 4],
@@ -662,6 +664,29 @@ export async function createRig({ scene, glbUrl, rigUrl, gltf, rigData, skin = t
     const sc = num / vp; if (!(sc > 0)) return null;
     const t = cq.clone().sub(cp.clone().applyQuaternion(q).multiplyScalar(sc));
     return { s: sc, q, t };
+  }
+
+  // ---------------- jaw (temporomandibular joint) ----------------
+  // The mandible is a mesh of the skull segment. Mouth opening = rotation about the axis through
+  // both condylar heads, coupled with the forward-downward glide of the condyles along the
+  // articular eminence (hinge first, glide from ≈ 10° on; ≈ 9 mm at full opening).
+  const TMJ = J.temporomandibular; let jawDeg = 0;
+  const JAW_MAX = 32;
+  function setJaw(deg) {
+    const m = meshes.mandible; if (!m || !TMJ) return 0;
+    const d = Math.min(JAW_MAX, Math.max(0, deg || 0));
+    if (Math.abs(d - jawDeg) < 0.05) return jawDeg;
+    jawDeg = d;
+    const c = V3(TMJ.center), ax = V3(TMJ.axes.opening).normalize();
+    const g = state.coupling === false ? 0 : Math.min(1, Math.max(0, (d - 10) / 20));
+    const glide = new THREE.Vector3(0, -0.35, 1).normalize().multiplyScalar(0.009 * g * g * (3 - 2 * g));
+    m.matrixAutoUpdate = false;
+    m.matrix.makeTranslation(c.x + glide.x, c.y + glide.y, c.z + glide.z)
+      .multiply(new THREE.Matrix4().makeRotationAxis(ax, d * Math.PI / 180))
+      .multiply(new THREE.Matrix4().makeTranslation(-c.x, -c.y, -c.z));
+    m.matrixWorldNeedsUpdate = true;
+    const h = meshes.hyoid; if (h) { h.matrixAutoUpdate = false; h.matrix.makeTranslation(0, -0.006 * d / JAW_MAX, -0.003 * d / JAW_MAX); h.matrixWorldNeedsUpdate = true; }
+    return jawDeg;
   }
 
   // ---------------- display ----------------
@@ -708,11 +733,12 @@ export async function createRig({ scene, glbUrl, rigUrl, gltf, rigData, skin = t
    */
   const SEG_CONF = [[/^humerus_/, 'shoulder'], [/^ulna_/, 'elbow'], [/^radius_/, 'forearm'], [/^(carpalsProximal|hand)_/, 'wrist'],
     [/^(thumb|index|middle|ring|little)/, 'fingers'], [/^femur_/, 'hip'], [/^(tibia|patella)_/, 'knee'], [/^(talus|foot)_/, 'ankle']];
-  function setConfidence(conf, threshold = 0.4) {
+  function setConfidence(conf, threshold = 0.4, exempt = null) {
     const next = new Set();
     if (conf) {
       const get = (k) => { if (k in conf) return conf[k]; let m = Infinity; for (const key in conf) if (key.startsWith(`${k}.`)) m = Math.min(m, conf[key]); return Number.isFinite(m) ? m : 1; };
       for (const seg of order) {
+        if (exempt?.has(seg.id)) continue; // placed directly on its own landmarks (close-up hand)
         if (seg.parent && next.has(seg.parent)) { next.add(seg.id); continue; }
         const sideKey = seg.id.endsWith('_L') ? 'left' : seg.id.endsWith('_R') ? 'right' : null;
         const hit = SEG_CONF.find(([re]) => re.test(seg.id));
@@ -812,6 +838,7 @@ export async function createRig({ scene, glbUrl, rigUrl, gltf, rigData, skin = t
     setUseRoot: (b) => { state.useRoot = !!b; setPose(state.pose); },
     highlight, nodeInfo, setStyle, setConfidence, setHiddenSegments,
     /** close-up overrides {head?, hands?} in root-local coordinates (null = off); applied on every setPose */
+    setJaw, getJaw: () => jawDeg, JAW_MAX,
     setCloseup: (cu, { apply = true } = {}) => { state.closeup = cu || null; if (apply) setPose(state.pose); },
     /** root-local position of a segment's pivot (joint centre) */
     rootLocalPosition: (segId, target = new THREE.Vector3()) => { root.updateMatrixWorld(true); _rootInv.copy(root.matrixWorld).invert(); return target.setFromMatrixPosition(rootLocal(segs[segId].group)); }, getStyle: () => style, setSkin, showAxes, showLandmarks, scaleToDims,

@@ -23,6 +23,7 @@
 <main id="app">
   <section id="viewport">
     <video id="video" playsinline muted></video>
+    <canvas id="camFrame" width="640" height="480"></canvas>
     <canvas id="demo2d" width="640" height="480"></canvas>
     <canvas id="gl"></canvas>
     <div id="loading">骨格モデルを読み込み中…</div>
@@ -79,6 +80,7 @@
           <label class="switch"><input id="camSide3D" type="checkbox"><span>3Dビューを並べて表示</span></label>
           <label class="switch"><input id="camDim" type="checkbox" checked><span>映像を暗くする</span></label>
           <label class="switch"><input id="camHands" type="checkbox" checked><span>手の追跡（指・回内外）※重い場合はOFF</span></label>
+          <label class="switch"><input id="camFace" type="checkbox" checked><span>顔の追跡（頭の向き・口の開閉）※重い場合はOFF</span></label>
           <label class="switch"><input id="camFade" type="checkbox" checked><span>推定の信頼度が低い骨を薄く表示</span></label>
           <label class="inline">モデル
             <select id="camModel"><option value="lite">軽量（スマホ向け）</option><option value="full">標準</option></select>
@@ -93,7 +95,8 @@
               <li>肘を伸ばしていると、肩の回旋と前腕の回内外は映像から区別できません（どちらとも解釈できる）。</li>
               <li>体幹の屈曲・肩甲骨・鎖骨・膝蓋骨・スクリューホームは直接は見えず、モデルによる推定です。</li>
               <li>真横（側面）から撮った場合や、カメラに向けて伸ばした腕・脚は奥行きの誤差が大きく、精度が落ちます。</li>
-              <li>顔や手のアップ（【顔・肩】【顔】【手】）にも対応します。頭蓋は顔の目・耳・鼻・口に合わせ（平均的な成人の頭の大きさを仮定）、手の骨は手の特徴点に1本ずつ合わせます。映っていない部分の骨は表示しません。</li>
+              <li>顔や手のアップ（【顔・肩】【顔】【手】）にも対応します。頭蓋は顔の追跡（目・鼻・額・頬骨など約40点）に合わせ、口の開閉は下顎骨の回転＋顆頭の前方滑走として再現します（平均的な成人の顔の大きさを仮定）。手の骨は手の特徴点に1本ずつ合わせ、顔と同時に映っていても両方表示します。映っていない部分の骨は表示しません。</li>
+              <li>手がカメラに近すぎてぼやけている・画面からはみ出している・顔の大部分を隠している場合は、手や顔を検出できないことがあります（指先から手首まで画面に入る距離が目安）。</li>
               <li>骨は標準的な骨格モデル（BodyParts3D）を体格に合わせて伸縮したもので、あなた自身の骨ではありません。実際の人物での精度は未検証です。</li>
             </ul>
           </details>

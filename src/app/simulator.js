@@ -11,7 +11,7 @@ const setPath = (o, path, v) => { const ks = path.split('.'); const last = ks.po
 export function createSimulator({ rig, ui }) {
   const $ = ui.$;
   let pose = completePose(anatomicalPose());
-  let grip = { left: 0, right: 0 };
+  let grip = { left: 0, right: 0 }; let jaw = 0;
   let preset = null, playing = false, t = 0, speed = 1, teachTimer = 0;
   const inputs = [];
 
@@ -23,14 +23,15 @@ export function createSimulator({ rig, ui }) {
     for (const [path, label, min, max] of g.items) {
       const id = `sl_${path.replace(/\./g, '_')}`;
       const wrap = document.createElement('div'); wrap.className = 'slider';
-      const isGrip = path.endsWith('.grip');
+      const isGrip = path.endsWith('.grip'); const isJaw = path === 'jaw.open';
       wrap.innerHTML = `<label for="${id}">${label}</label><output></output><input id="${id}" type="range" min="${min}" max="${max}" step="1">`;
       const input = wrap.querySelector('input'), out = wrap.querySelector('output');
-      const rec = { path, input, out, isGrip, last: null };
+      const rec = { path, input, out, isGrip, isJaw, last: null };
       input.addEventListener('input', () => {
         stopPreset(false);
         const v = Number(input.value);
         if (isGrip) { const side = path.split('.')[0]; grip[side] = v; pose[side].fingers = fistFingers(v / 100); }
+        else if (isJaw) jaw = v;
         else setPath(pose, path, v);
         apply();
       });
@@ -41,7 +42,7 @@ export function createSimulator({ rig, ui }) {
   });
   function syncSliders() {
     for (const r of inputs) {
-      const v = r.isGrip ? grip[r.path.split('.')[0]] : getPath(pose, r.path);
+      const v = r.isGrip ? grip[r.path.split('.')[0]] : r.isJaw ? jaw : getPath(pose, r.path);
       const rv = Math.round(v ?? 0);
       if (rv !== r.last) { r.input.value = rv; r.out.textContent = r.isGrip ? `${rv}%` : `${rv}°`; r.last = rv; }
     }
@@ -81,7 +82,7 @@ export function createSimulator({ rig, ui }) {
   // ---------- resets ----------
   function reset(kind) {
     stopPreset();
-    pose = completePose(anatomicalPose()); grip = { left: 0, right: 0 };
+    pose = completePose(anatomicalPose()); grip = { left: 0, right: 0 }; jaw = 0;
     if (kind === 'neutral') { pose.left.forearm.pronation = 0; pose.right.forearm.pronation = 0; }
     apply();
   }
@@ -89,7 +90,7 @@ export function createSimulator({ rig, ui }) {
   $('resetNeutral').addEventListener('click', () => reset('neutral'));
 
   function apply() {
-    rig.setPose(pose);
+    rig.setPose(pose); rig.setJaw(jaw);
     syncSliders();
   }
 
@@ -102,7 +103,7 @@ export function createSimulator({ rig, ui }) {
 
   apply(); updatePlayBtn();
   return {
-    enter() { rig.setUseRoot(false); rig.scaleToDims(rig.rigData.dims); apply(); if (preset) updateTeach(true); },
+    enter() { rig.setUseRoot(false); rig.setJaw(jaw); rig.scaleToDims(rig.rigData.dims); apply(); if (preset) updateTeach(true); },
     exit() { playing = false; updatePlayBtn(); ui.setTeach(null); },
     update(dt) {
       teachTimer -= dt;
@@ -119,5 +120,6 @@ export function createSimulator({ rig, ui }) {
     startPreset, stopPreset, reset,
     setPose(p) { stopPreset(); pose = completePose(p); apply(); },
     get pose() { return pose; },
+    setJaw(v) { jaw = v; apply(); },
   };
 }

@@ -8,7 +8,7 @@ export const JOINT_JA = {
   cmc1: '母指CM関節', mcp1: '母指MP関節', ip1: '母指IP関節',
   hip: '股関節', knee: '膝関節（脛骨大腿関節）', patellofemoral: '膝蓋大腿関節',
   talocrural: '距腿関節（足関節）', subtalar: '距骨下関節',
-  lumbosacral: '腰仙関節（L5/S1）', atlantooccipital: '環椎後頭関節', C1C2: '環軸関節（C1/C2）',
+  lumbosacral: '腰仙関節（L5/S1）', temporomandibular: '顎関節', atlantooccipital: '環椎後頭関節', C1C2: '環軸関節（C1/C2）',
   T12L1: 'T12/L1 椎間（胸腰移行部）', C7T1: 'C7/T1 椎間',
 };
 const FINGER_JA = { 2: '示指', 3: '中指', 4: '環指', 5: '小指' };
@@ -57,6 +57,7 @@ export const SLIDER_GROUPS = [
     ['neck.flexion', '頸部 屈曲（+）/ 伸展（−）', ...ROM.neck.flexion],
     ['neck.lateralBend', '頸部 側屈（+右 / −左）', ...ROM.neck.lateralBend],
     ['neck.axialRotation', '頸部 回旋（+左 / −右）', ...ROM.neck.axialRotation],
+    ['jaw.open', '顎関節 開口（下顎の回転＋前方滑走）', 0, 32],
   ] },
   { title: '右上肢', items: limb('right') },
   { title: '左上肢', items: limb('left') },
